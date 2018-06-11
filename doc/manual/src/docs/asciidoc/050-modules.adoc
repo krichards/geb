@@ -1,0 +1,534 @@
+[[modules]]
+= Modules
+
+Modules are re-usable definitions of content that can be used across multiple pages.
+They are useful for modelling things like UI widgets that are used across multiple pages, or even for defining more complex UI elements in a page.
+
+They are defined in a manner similar to pages, but extend `{module-api}`…
+
+[source,groovy]
+----
+include::{test-dir}/modules/FormContentSpec.groovy[tag=form_module,indent=0]
+----
+
+Pages can “include” modules using the following syntax…
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=module_page,indent=0]
+----
+
+The `module` method returns an instance of a module class which can then be used in the following way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=using_modules,indent=0]
+----
+
+Modules can also be parameterised…
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=parameterized_module,indent=0]
+----
+
+Where the parameters are passed to constructor of the module…
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=parameterized_module_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=using_parameterized_modules,indent=0]
+----
+
+Modules can also include other modules…
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=outer_module_and_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/modules/IntroductionSpec.groovy[tag=using_nested_modules,indent=0]
+----
+
+[[base-and-context]]
+== Base and context
+
+Modules can be localised to a specific section of the page that they are used in, or they can specify an absolute context as part of their definition.
+There are two ways that a modules base/context can be defined.
+
+Module can be based on a `Navigator` instance…
+
+[source,groovy]
+----
+include::{test-dir}/modules/FormContentSpec.groovy[tag=form_module,indent=0]
+
+include::{test-dir}/modules/BaseAndContextSpec.groovy[tag=module_with_base_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/modules/BaseAndContextSpec.groovy[tag=using_module_with_dynamic_base,indent=0]
+----
+
+It can also be done outside of a content definition…
+
+[source,groovy]
+----
+include::{test-dir}/modules/BaseAndContextSpec.groovy[tag=creating_module_inline,indent=0]
+----
+
+We can define a `Navigator` context when including the module using the above syntax.
+This now means that calls to _all_ `Navigator` (e.g. `$()`) method calls that occur within the module are against the given context (in this case, the `form` element).
+
+However, module classes can also define their own base…
+
+[source,groovy]
+----
+include::{test-dir}/modules/BaseAndContextSpec.groovy[tag=form_module_with_base,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/modules/BaseAndContextSpec.groovy[tag=using_module_with_static_base,indent=0]
+----
+
+Basing a module on a `Navigator` and defining a base in a module can be combined. Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/modules/CombinedModuleBaseSpec.groovy[tag=html,indent=0]
+----
+
+And the following content definitions…
+
+[source,groovy]
+----
+include::{test-dir}/modules/CombinedModuleBaseSpec.groovy[tag=content,indent=0]
+----
+
+Then they can be used in the following way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/CombinedModuleBaseSpec.groovy[tag=example,indent=0]
+----
+
+If the module declares a base, it is always calculated _relative_ to the `Navigator` used in the initialization statement.
+If the initialization statement does not use a `Navigator`, the module's base is calculated relative to the document root.
+
+== `Module` is-a `Navigator`
+
+Modules always have a base navigator associated with them (if you don't specify a base for a module at all then it will be assigned the root element of the document as the base) so it is natural to
+think of them as navigators.
+Keeping in mind that `Module` implements `Navigator` and considering the following HTML…
+
+[source,html]
+----
+include::{test-dir}/modules/ModuleIsANavigatorSpec.groovy[tag=html,indent=0]
+----
+
+As well as these content definitions…
+
+[source,groovy]
+----
+include::{test-dir}/modules/ModuleIsANavigatorSpec.groovy[tag=content,indent=0]
+----
+
+The following will pass…
+
+[source,groovy]
+----
+include::{test-dir}/modules/ModuleIsANavigatorSpec.groovy[tag=on_module,indent=0]
+----
+
+It's also possible to use `Navigator` methods inside of a module implementation…
+
+[source,groovy]
+----
+include::{test-dir}/modules/ModuleIsANavigatorSpec.groovy[tag=in_module_definition,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/modules/ModuleIsANavigatorSpec.groovy[tag=in_module,indent=0]
+----
+
+== Reusing modules across pages
+
+As previously stated, modules can be used to model page fragments that are reused across multiple pages.
+For example, many different types of pages in your application may show information about the user's shopping cart.
+You could handle this with modules…
+
+[source,groovy]
+----
+include::{test-dir}/modules/ReusingModulesSpec.groovy[tag=content,indent=0]
+----
+
+Modules work well for this.
+
+[[repeating-content]]
+== Using modules for repeating content
+
+Other than content that is repeated on different pages (like the shopping cart mentioned above), pages also can have content that is repeated on the page itself.
+On a checkout page, the contents of the shopping cart could be summarized with the product name, the quantity and price for each product contained.
+For this kind of page, a list of modules can be collected using the `moduleList()` methods of `Navigator`.
+
+Consider the following HTML for our cart contents:
+
+[source,html]
+----
+include::{test-dir}/modules/RepeatingContentSpec.groovy[tag=html,indent=0]
+----
+
+We can model one line of the table like this:
+
+[source,groovy]
+----
+include::{test-dir}/modules/RepeatingContentSpec.groovy[tag=module,indent=0]
+----
+
+And define a list of CartRows in our Page:
+
+[source,groovy]
+----
+include::{test-dir}/modules/RepeatingContentSpec.groovy[tag=page,indent=0]
+----
+
+Because the return value of `cartItems` is a list of CartRow instances, we can use any of the usual collection methods:
+
+[source,groovy]
+----
+include::{test-dir}/modules/RepeatingContentSpec.groovy[tag=collection,indent=0]
+----
+
+We can also access the cart items using subscript operator together with an index or a range of indexes:
+
+[source,groovy]
+----
+include::{test-dir}/modules/RepeatingContentSpec.groovy[tag=indexing,indent=0]
+----
+
+Keep in mind that you can use parametrized module instances to create lists of modules for repeating content:
+
+[source,groovy]
+----
+include::{test-dir}/modules/RepeatingContentSpec.groovy[tag=parameterized_module,indent=0]
+----
+
+[TIP]
+====
+You might be wondering why the `moduleList()` method flavour that allows the use parameterized module instances takes a closure instead of a module instance, which is what the `module()` method for
+creating parameterized modules does.
+If it took a single instance then it could only initialize it multiple times and return a list which would contain the same instance but many times!
+To be able to return a list of different instances it's needs a closure which acts as a factory of module instances.
+====
+
+== The content DSL
+
+The Content DSL used for modules is _exactly_ the same as the <<content-dsl, one used for pages>>, so all of the same options and techniques can be used.
+
+== Inheritance
+
+Modules can use inheritance in the <<pages-inheritance, same way that pages can>>.
+That is, their content definitions are merged with any content redefined in the subclass taking precedence of the superclass.
+
+== Form control modules
+
+If you are using Geb in <<strong-typing, a strongly typed manner>> you might consider using the provided {geb-module-package}[modules modelling form controls] instead of
+<<setting-form-control-values, manipulating them directly using the `Navigator` API>>.
+This will result in longer content definitions but using them will be easier because you won't have to remember what is the meaning of `value()` calls for different types of controls.
+This is for example the case when manipulating checkboxes for which checking and unchecking is achieved by passing booleans to `value()` when interacting with them via `Navigator` API.
+
+[NOTE]
+====
+All of these modules (apart from <<radio-buttons-module>>) are expecting to <<base-and-context, be based>> on single element navigators and will throw `InvalidModuleBaseException` with an
+appropriate message if that is not the case.
+They also verify that the base contains an element of the expected type providing better error reporting in case of mistakenly selecting an incorrect element as the base.
+====
+
+[[form-element]]
+=== `FormElement`
+
+`{form-element-api}` is a base class for all modules modelling form controls (apart from <<radio-buttons-module>>) and provides shortcut property methods for checking if a control is disabled or read
+only.
+You will usually call these methods on the module classes for specific control types and rarely use this module directly.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/FormElementSnippetSpec.groovy[tag=html,indent=0]
+----
+
+Following is an example of using the shortcut property methods provided…
+
+[source,groovy]
+----
+include::{test-dir}/modules/FormElementSnippetSpec.groovy[tag=example,indent=0]
+----
+
+[[checkbox-module]]
+=== `Checkbox`
+
+The `{checkbox-api}` module provides utility methods for checking and unchecking checkboxes as well as property methods for retrieving their state.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/CheckboxSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/CheckboxSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `Select`
+
+The `{select-api}` module provides property methods for selecting options as well as retrieving selected option's value and text of a single choice select element.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/SelectSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/SelectSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `MultipleSelect`
+
+The `{multiple-select-api}` module provides property methods for selecting options as well as retrieving selected option's value and text of a multiple choice select element.
+These methods take and return lists of strings.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/MultipleSelectSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/MultipleSelectSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `TextInput`
+
+The `{text-input-api}` module provides property methods for setting and retrieving text of an input text element.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/TextInputSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/TextInputSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `Textarea`
+
+The `{textarea-api}` module provides property methods for setting and retrieving text of a textarea element.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/TextareaSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/TextareaSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `FileInput`
+
+The `{file-input-api}` module provides a setter for the file location of a file input element.
+The method takes a `File` instance.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/FileInputSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/FileInputSnippetSpec.groovy[tag=example,indent=0]
+----
+
+[[radio-buttons-module]]
+=== `RadioButtons`
+
+The `{radio-buttons-api}` module provides property methods for checking radio buttons as well as retrieving selected button's value and text of the label associated with it.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/RadioButtonsSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/RadioButtonsSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `SearchInput`
+
+The `{search-input-api}` module provides property methods for setting and retrieving text of a search input element.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/SearchInputSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/SearchInputSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `DateInput`
+
+The `{date-input-api}` module provides property methods for setting and retrieving date of a date input element.
+
+Given the html…
+
+[source,html]
+----
+include::{real-browser-test-dir}/modules/DateInputSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/modules/DateInputSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `EmailInput`
+
+The `{email-input-api}` module provides property methods for setting and retrieving text of an email input element.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/EmailInputSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/EmailInputSnippetSpec.groovy[tag=example,indent=0]
+----
+
+=== `TelInput`
+
+The `{tel-input-api}` module provides property methods for setting and retrieving text of a tel input element.
+
+Given the html…
+
+[source,html]
+----
+include::{test-dir}/modules/TelInputSnippetSpec.groovy[tag=html,indent=0]
+----
+
+It can be used this way…
+
+[source,groovy]
+----
+include::{test-dir}/modules/TelInputSnippetSpec.groovy[tag=example,indent=0]
+----
+
+== Unwrapping modules returned from the `content` DSL
+
+For the sake of better error reporting, current implementation wraps any module declared within `content` block into
+`geb.content.TemplateDerivedPageContent` instance.
+
+Given a page defined as follows:
+
+[source,groovy]
+----
+include::{test-dir}/modules/UnwrappingModulesSnippetSpec.groovy[tag=page,indent=0]
+----
+
+And a custom module:
+
+[source,groovy]
+----
+include::{test-dir}/modules/UnwrappingModulesSnippetSpec.groovy[tag=module,indent=0]
+----
+
+A module assignment to a variable of its declared type will fail with `GroovyCastException`:
+
+[source,groovy]
+----
+include::{test-dir}/modules/UnwrappingModulesSnippetSpec.groovy[tag=module_variable_fail,indent=0]
+----
+<1> `GroovyCastException` is thrown
+
+An invocation of a method which takes a module as argument with its declared type will fail with `MissingMethodException`:
+
+[source,groovy]
+----
+include::{test-dir}/modules/UnwrappingModulesSnippetSpec.groovy[tag=module_argument_fail_method,indent=0]
+
+include::{test-dir}/modules/UnwrappingModulesSnippetSpec.groovy[tag=module_argument_fail,indent=0]
+----
+<1> `MissingMethodException` is thrown
+
+As you may like or need to use strong typing for modules there is a way to do that. Module can be cast to its declared type with the Groovy `as` operator:
+
+[source,groovy]
+----
+include::{test-dir}/modules/UnwrappingModulesSnippetSpec.groovy[tag=module_cast,indent=0]
+----
+
+[NOTE]
+====
+Bear in mind that casting of a module to its declared type means the module gets unwrapped. By doing so the convenient error messages for such module are gone.
+====
+
+What's the trade-off? Calling `toString()` on any content element, including module, gives a meaningful path like:
+
+[source]
+----
+modules.ModuleUnwrappingPage -> theModule: modules.UnwrappedModule -> theContent: geb.navigator.NonEmptyNavigator
+----
+
+Such paths can be seen in error messages and this is exactly what you are going to give away for unwrapped modules.

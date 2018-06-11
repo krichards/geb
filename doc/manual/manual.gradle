@@ -1,0 +1,146 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'org.asciidoctor:asciidoctor-gradle-plugin:1.5.2'
+    }
+}
+
+apply plugin: 'org.asciidoctor.convert'
+
+archivesBaseName = "geb-manual"
+
+modifyPom { pom ->
+    pom.project {
+        name "Geb Manual - The Book of Geb"
+        description "Geb (pronounced \"jeb\") manual, user guide and API reference."
+    }
+}
+
+configurations {
+    create("groovydoc")
+    archives.extendsFrom delegate.default
+}
+
+dependencies {
+    groovydoc groovyDependency
+}
+
+asciidoctor {
+    attributes = [
+        toc                    : 'left',
+        doctype                : 'book',
+        encoding               : 'utf-8',
+        'test-dir'             : '../../../../manual-snippets/src/test/groovy',
+        'test-resources-dir'   : '../../../../manual-snippets/src/test/resources',
+        'real-browser-test-dir': '../../../../manual-snippets/src/realBrowserTest/groovy',
+        'core-source-dir'      : '../../../../../module/geb-core/src/main/groovy',
+        numbered               : true,
+        sectlinks              : true,
+        idprefix               : '',
+        idseparator            : '-',
+        icons                  : 'font',
+        'source-highlighter'   : 'prettify',
+        'geb-version'          : project.version,
+        'geb-group'            : project.group,
+        'geb-group-dir'        : project.group.replace('.', '/'),
+        'spock-version'        : '0.7',
+        'spock-core-version'   : spockVersion,
+        'selenium-version'     : seleniumVersion,
+        'groovy-version'       : groovyVersion,
+        'home-page'            : 'www.gebish.org',
+        docinfo1               : true,
+        linkcss                : true,
+        stylesheet             : 'css/style.css',
+        imagesdir              : 'images'
+    ]
+
+    sources {
+        include 'index.adoc'
+    }
+
+    resources {
+        from file('src/resources')
+    }
+
+    extensions {
+        inlinemacro(name: "issue") { parent, target, attributes ->
+            options = [
+                type  : ":link",
+                target: "https://github.com/geb/issues/issues/${target}"
+            ]
+
+            createInline(parent, "anchor", "#$target", attributes, options).render()
+        }
+        inlinemacro(name: "github-profile") { parent, target, attributes ->
+            options = [
+                type  : ":link",
+                target: "https://github.com/${target}"
+            ]
+            createInline(parent, "anchor", attributes.text, attributes, options).render()
+        }
+    }
+}
+
+task apiDoc(type: Groovydoc) {
+    def apiGroovyModuleProjects = apiGroovyModules.collect { project(it) }
+    groovyClasspath = files(apiGroovyModuleProjects*.configurations*.compile + [configurations.groovydoc])
+    classpath = files()
+    destinationDir = file("$buildDir/apiDoc")
+    apiGroovyModuleProjects.each {
+        source it.sourceSets.main.groovy, it.sourceSets.main.java
+        classpath += it.sourceSets.main.compileClasspath + it.sourceSets.main.output
+    }
+}
+
+task packageManual(type: Sync) {
+    into "$buildDir/manual"
+    from asciidoctor
+
+    into("api") {
+        from apiDoc
+    }
+
+    eachFile { file ->
+        if (file.path.startsWith("html5")) {
+            file.relativePath = new RelativePath(!file.directory, file.relativePath.segments[1..-1] as String[])
+        }
+    }
+
+    includeEmptyDirs = false
+}
+
+task manualZip(type: Zip) {
+    from packageManual
+}
+
+artifacts {
+    delegate.default manualZip
+}
+
+build {
+    dependsOn manualZip
+}
+
+task openManual() {
+    dependsOn tasks.asciidoctor
+    doLast {
+        new java.awt.Desktop().browse(fileTree(tasks.asciidoctor.outputDir).find { it.name == 'index.html' }.toURI())
+    }
+}
+
+asciidoctor {
+    inputs.files(
+        { project(":doc:manual-snippets").sourceSets.test.allSource },
+        { project(":doc:manual-snippets").sourceSets.realBrowserTest.allSource },
+        { project(":module:geb-core").sourceSets.main.allSource }
+    )
+}
+
+idea {
+    module {
+        excludeDirs += file('build')
+    }
+}

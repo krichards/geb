@@ -18,54 +18,37 @@ package geb.report
  * Common support for reporter implemenations.
  */
 abstract class ReporterSupport implements Reporter {
-	
-	private dir
-	
-	/**
-	 * Configures the dir for the reporter, optionally emptying it.
-	 * 
-	 * @param dir the directory to write reports to
-	 * @param doClean whether or not to empty the directory
-	 */
-	ReporterSupport(File dir, boolean doClean = false) {
-		this.dir = dir
-		if (doClean && dir.exists()) {
-			if (!dir.deleteDir()) {
-				throw new IllegalStateException("Could not clean report dir '${dir}'")
-			}
-		}
-		
-		if (!dir.exists() && !dir.mkdirs()) {
-			throw new IllegalStateException("Could not create report dir '${dir}'")
-		}
-	}
-	
-	/**
-	 * Gets a file reference for the object with the given name and extension within the dir.
-	 */
-	protected getFile(String name, String extension) {
-		new File(getReportDir(), "${escapeFileName(name)}.${escapeFileName(extension)}")
-	}
-	
-	/**
-	 * Replaces all non word chars with underscores to avoid using reserved characters in file paths
-	 */
-	protected escapeFileName(String name) {
-		name.replaceAll("[^\\w\\s-]", "_")
-	}
-	
-	/**
-	 * The directory that this reporter writes to
-	 */
-	protected getReportDir() {
-		dir
-	}
 
-	/**
-	 * Given a file at path {@code /some/dir} and class {@code java.lang.String} will return
-	 * a file for path {@code /some/dir/java/lang/String}.
-	 */
-	static getDirForClass(File dir, Class clazz) {
-		new File(dir, clazz.name.replace('.', '/'))
-	}
+    private final List<ReportingListener> listeners = []
+
+    /**
+     * Gets a file reference for the object with the given name and extension within the dir.
+     */
+    protected getFile(File dir, String name, String extension) {
+        new File(dir, "${escapeFileName(name)}.${escapeFileName(extension)}")
+    }
+
+    /**
+     * Replaces all non word chars with underscores to avoid using reserved characters in file paths
+     */
+    protected escapeFileName(String name) {
+        name.replaceAll("(?U)[^\\w\\s-]", "_")
+    }
+
+    void addListener(ReportingListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners << listener
+        }
+    }
+
+    protected void notifyListeners(ReportState reportState, List<File> reportFiles) {
+        for (listener in listeners) {
+            listener.onReport(this, reportState, reportFiles)
+        }
+    }
+
+    static String toTestReportLabel(int testCounter, int reportCounter, String methodName, String label) {
+        def numberFormat = "%03d"
+        "${String.format(numberFormat, testCounter)}-${String.format(numberFormat, reportCounter)}-$methodName-$label"
+    }
 }

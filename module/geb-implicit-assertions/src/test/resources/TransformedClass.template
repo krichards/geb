@@ -1,0 +1,46 @@
+class TestClass {
+    static at = {
+        $closureBody
+    }
+
+    def waitFor(Closure closure) {
+        closure.call()
+    }
+
+    def refreshWaitFor(Closure closure) {
+        closure.call()
+    }
+
+    def at(Class type, Closure closure) {
+        closure.call()
+    }
+
+    boolean booleanMethod(boolean returned) {
+        returned
+    }
+
+    static void voidMethod() {
+    }
+
+    String nullReturningMethod() {
+        null
+    }
+
+    def runWaitFor() {
+        waitFor {
+            $closureBody
+        }
+    }
+
+    def runRefreshWaitFor() {
+        refreshWaitFor {
+            $closureBody
+        }
+    }
+
+    def runAt() {
+        at(TestClass) {
+            $closureBody
+        }
+    }
+}

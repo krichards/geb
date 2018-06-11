@@ -1,0 +1,103 @@
+:linkattrs:
+
+:groovy: link:http://groovy-lang.org/[Groovy]
+:jquery: link:http://jquery.com/[jQuery]
+:webdriver: link:http://code.google.com/p/selenium/[WebDriver]
+:selenium-api-link: link:http://static.javadoc.io/org.seleniumhq.selenium/selenium-api/{selenium-version}
+:webdriver-api: {selenium-api-link}/org/openqa/selenium/WebDriver.html[WebDriver]
+:webelement-api: {selenium-api-link}/org/openqa/selenium/WebElement.html[WebElement]
+:by-api: {selenium-api-link}/org/openqa/selenium/By.html[By]
+:actions-api: {selenium-api-link}/org/openqa/selenium/interactions/Actions.html[Actions]
+:htmlunitdriver: link:http://static.javadoc.io/org.seleniumhq.selenium/selenium-htmlunit-driver/{selenium-version}/org/openqa/selenium/htmlunit/HtmlUnitDriver.html
+:iedriver: link:http://static.javadoc.io/org.seleniumhq.selenium/selenium-ie-driver/{selenium-version}/org/openqa/selenium/ie/InternetExplorerDriver.html
+:firefoxdriver: link:http://static.javadoc.io/org.seleniumhq.selenium/selenium-firefox-driver/{selenium-version}/org/openqa/selenium/firefox/FirefoxDriver.html
+:chromedriver: link:http://static.javadoc.io/org.seleniumhq.selenium/selenium-chrome-driver/{selenium-version}/org/openqa/selenium/chrome/ChromeDriver.html
+:edgedriver: link:https://seleniumhq.github.io/selenium/docs/api/java/org/openqa/selenium/edge/EdgeDriver.html
+:webdriver-send-keys-api: {selenium-api-link}/org/openqa/selenium/WebElement.html#sendKeys(java.lang.CharSequence%2E%2E%2E)[sendKeys()]
+:webdriver-keys-api: {selenium-api-link}/org/openqa/selenium/Keys.html[Keys]
+:no-such-frame-exception-api: {selenium-api-link}/org/openqa/selenium/NoSuchFrameException.html[NoSuchFrameException]
+:spock-link: link:http://spockframework.org/
+:spock: {spock-link}[Spock]
+:spock-with: {spock-link}/spock/javadoc/1.1/spock/lang/Specification.html#with-java.lang.Object-groovy.lang.Closure-[Specification.with(Object, Closure<?>)]
+:junit: link:http://www.junit.org/[JUnit]
+:testng: link:http://testng.org/[TestNg]
+:cucumber-jvm: link:https://github.com/cucumber/cucumber-jvm[Cucumber-JVM]
+:geb-cucumber: link:https://github.com/tomdcc/geb-cucumber[geb-cucumber]
+:remotewebdriver: link:http://code.google.com/p/selenium/wiki/RemoteWebDriver[RemoteWebDriver]
+:remotewebdriver-server: link:http://code.google.com/p/selenium/wiki/RemoteWebDriverServer[RemoteWebDriverServer]
+:groovy-api-link: link:http://docs.groovy-lang.org/docs/groovy-{groovy-version}/html
+:config-slurper-api: {groovy-api-link}/gapi/groovy/util/ConfigSlurper.html[ConfigSlurper]
+:groovy-binding-link: {groovy-api-link}/api/groovy/lang/Binding.html
+:java-api-link: link:https://docs.oracle.com/javase/8/docs/api
+:http-url-connection-link: {java-api-link}/java/net/HttpURLConnection.html
+:configuration-api: link:api/geb/Configuration.html[Configuration]
+:browser-api: link:api/geb/Browser.html[Browser]
+:page-api: link:api/geb/Page.html[Page]
+:module-api: link:api/geb/Module.html[Module]
+:navigator-api: link:api/geb/navigator/Navigator.html[Navigator]
+:binding-updater-link: link:api/geb/binding/BindingUpdater.html
+:groovy-truth-link: link:http://groovy-lang.org/semantics.html#Groovy-Truth
+:groovy-truth: {groovy-truth-link}[Groovy Truth]
+:drive-method-link: link:api/geb/Browser.html#drive(groovy.lang.Closure)
+:drive-method-api: {drive-method-link}[drive()]
+:page-method-taking-class-api-link: link:api/geb/Browser.html#page(Class<T>)
+:page-method-taking-class-api: {page-method-taking-class-api-link}[<T extends Page> T page(Class<T> pageType)]
+:page-method-taking-instance-api: link:api/geb/Browser.html#page(T)[<T extends Page> T page(T pageInstance)]
+:page-method-taking-classes-array-api: link:api/geb/Browser.html#page(Class<?%20extends%20Page>)[Page page(Class<? extends Page>[\] potentialPageTypes)]
+:page-method-taking-instances-array-api: link:api/geb/Browser.html#page(geb.Page)[Page page(Page[\] potentialPageInstances)]
+:at-method-taking-class-api-link: link:api/geb/Browser.html#at(Class<T>)
+:at-method-taking-class-api: {at-method-taking-class-api-link}[<T extends Page> T at(Class<T> pageType)]
+:at-method-taking-instance-api: link:api/geb/Browser.html#at(T)[<T extends Page> T at(T page)]
+:at-method-taking-class-and-closure-api-link: link:api/geb/Browser.html#at(Class<T>,%20Closure<R>)
+:via-method-api: link:api/geb/Browser.html#via(java.util.Map,%20Class<T>,%20java.lang.Object)[via()]
+:browser-get-driver-api: link:api/geb/Browser.html#getDriver()[getDriver()]
+:browser-clear-cookies-api: link:api/geb/Browser.html#clearCookies()[clearCookies()]
+:browser-clear-cookies-urls-api: link:api/geb/Browser.html#clearCookies(java.lang.String)[clearCookies(String... additionalUrls)]
+:clear-browser-cache-api: link:api/geb/driver/CachingDriverFactory.html#clearCache()[CachingDriverFactory.clearCache()]
+:clear-browser-cache-and-quit-api: link:api/geb/driver/CachingDriverFactory.html#clearCacheAndQuitDriver()[CachingDriverFactory.clearCacheAndQuitDriver()]
+:required-page-content-not-present-api: link:api/geb/error/RequiredPageContentNotPresent.html[RequiredPageContentNotPresent]
+:content-page-count-out-of-bounds-exception-api: link:api/geb/error/ContentCountOutOfBoundsException.html[ContentCountOutOfBoundsException]
+:wait-timeout-exception-api: link:api/geb/waiting/WaitTimeoutException.html[WaitTimeoutException]
+:invalid-page-content-api: link:api/geb/error/InvalidPageContent.html[InvalidPageContent]
+:convert-to-path-api: link:api/geb/Page.html#convertToPath(java.lang.Object)[convertToPath()]
+:get-page-fragment-api: link:api/geb/Page.html#getPageFragment()[getPageFragment()]
+:to-api: link:api/geb/Browser.html#to(java.util.Map,%20T,%20java.lang.Object)[to()]
+:via-api: link:api/geb/Browser.html#via(java.util.Map,%20T,%20java.lang.Object)[via()]
+:at-api: link:api/geb/Browser.html#at(T)[at()]
+:page-method-api: link:api/geb/Browser.html#page(Class<T>)[page()]
+:build-adapter-api: link:api/geb/BuildAdapter.html[BuildAdapter]
+:system-properties-build-adapter-api: link:api/geb/buildadapter/SystemPropertiesBuildAdapter.html[SystemPropertiesBuildAdapter]
+:javascript-executor-execute-script-api: {selenium-api-link}/org/openqa/selenium/JavascriptExecutor.html#executeScript(java.lang.String,%20java.lang.Object...)[JavascriptExecutor.executeScript()]
+:javascript-executor-api: {selenium-api-link}/org/openqa/selenium/JavascriptExecutor.html[JavascriptExecutor]
+:waiting-support-api: link:api/geb/waiting/WaitingSupport.html[WaitingSupport]
+:wait-api: link:api/geb/waiting/Wait.html[Wait]
+:wait-for-api: link:api/geb/waiting/Wait.html#waitFor(Closure%3CT%3E)[waitFor()]
+:refresh-wait-for-api: link:api/geb/Page.html#refreshWaitFor(java.util.Map,%20Closure%3CT%3E)[refreshWaitFor()]
+:alert-and-confirm-support-api: link:api/geb/js/AlertAndConfirmSupport.html[AlertAndConfirmSupport]
+:download-support-api: link:api/geb/download/DownloadSupport.html[DownloadSupport]
+:reporter-api: link:api/geb/report/Reporter.html[Reporter]
+:page-source-reporter-api: link:api/geb/report/PageSourceReporter.html[PageSourceReporter]
+:screenshot-reporter-api: link:api/geb/report/ScreenshotReporter.html[ScreenshotReporter]
+:frames-source-reporter-api: link:api/geb/report/FramesSourceReporter.html[FramesSourceReporter]
+:composite-reporter-link: link:api/geb/report/CompositeReporter.html
+:browser-report-method-api: link:api/geb/Browser.html#report(java.lang.String)[report(String label)]
+:reporting-listener-api: link:api/geb/report/ReportingListener.html[ReportingListener]
+:clean-report-group-dir-api: link:api/geb/Browser.html#cleanReportGroupDir()[cleanReportGroupDir()]
+:sauce-connect: link:https://wiki.saucelabs.com/display/DOCS/Sauce+Connect+Proxy[SauceConnect]
+:geb-module-package: link:api/geb/module/package-summary.html
+:form-element-api: link:api/geb/module/FormElement.html[FormElement]
+:checkbox-api: link:api/geb/module/Checkbox.html[Checkbox]
+:select-api: link:api/geb/module/Select.html[Select]
+:multiple-select-api: link:api/geb/module/MultipleSelect.html[MultipleSelect]
+:text-input-api: link:api/geb/module/TextInput.html[TextInput]
+:file-input-api: link:api/geb/module/FileInput.html[FileInput]
+:textarea-api: link:api/geb/module/Textarea.html[Textarea]
+:radio-buttons-api: link:api/geb/module/RadioButtons.html[RadioButtons]
+:search-input-api: link:api/geb/module/SearchInput.html[SearchInput]
+:date-input-api: link:api/geb/module/DateInput.html[DateInput]
+:email-input-api: link:api/geb/module/EmailInput.html[EmailInput]
+:tel-input-api: link:api/geb/module/TelInput.html[TelInput]
+:interact-delegate-api: link:api/geb/interaction/InteractDelegate.html[InteractDelegate]
+:url-fragment-api: link:api/geb/url/UrlFragment.html[UrlFragment]
+:string-url-fragment-factory-link: link:api/geb/url/UrlFragment.html#of(java.lang.String)
+:map-url-fragment-factory-link: link:api/geb/url/UrlFragment.html#of(Map<?,%20?>)

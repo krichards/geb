@@ -14,103 +14,604 @@
  */
 package geb
 
-import geb.js.*
-import geb.internal.*
-import geb.navigator.Navigator
-import org.openqa.selenium.WebDriver
-import geb.textmatching.TextMatchingSupport
+import geb.content.*
+import geb.download.DefaultDownloadSupport
 import geb.download.DownloadSupport
+import geb.download.UninitializedDownloadSupport
+import geb.error.GebException
+import geb.error.PageInstanceNotInitializedException
+import geb.error.UndefinedAtCheckerException
+import geb.error.UnexpectedPageException
+import geb.frame.DefaultFrameSupport
+import geb.frame.FrameSupport
+import geb.frame.UninitializedFrameSupport
+import geb.interaction.DefaultInteractionsSupport
+import geb.interaction.InteractionsSupport
+import geb.interaction.UninitializedInteractionSupport
+import geb.js.AlertAndConfirmSupport
+import geb.js.DefaultAlertAndConfirmSupport
+import geb.js.JavascriptInterface
+import geb.js.UninitializedAlertAndConfirmSupport
+import geb.navigator.Navigator
+import geb.url.UrlFragment
+import geb.textmatching.TextMatchingSupport
+import geb.waiting.DefaultWaitingSupport
+import geb.waiting.UninitializedWaitingSupport
+import geb.waiting.Wait
 import geb.waiting.WaitingSupport
+import org.openqa.selenium.By
+import org.openqa.selenium.WebDriver
+import org.openqa.selenium.WebElement
 
-class Page {
+/**
+ * The Page type is the basis of the Page Object pattern in Geb.
+ * <p>
+ * This implementation is a generic model of every page. Subclasses add methods and
+ * content definitions that model specific pages.
+ * <p>
+ * This class (or subclasses) should not be instantiated directly.
+ * <p>
+ * The following classes are also mixed in to this class:
+ * <ul>
+ * <li>{@link geb.content.PageContentSupport}
+ * <li>{@link geb.download.DownloadSupport}
+ * <li>{@link geb.waiting.WaitingSupport}
+ * <li>{@link geb.textmatching.TextMatchingSupport}
+ * <li>{@link geb.js.AlertAndConfirmSupport}
+ * </ul>
+ * <p>
+ * See the chapter in the Geb manual on pages for more information on writing subclasses.
+ */
+class Page implements Navigable, PageContentContainer, Initializable, WaitingSupport {
 
-	static at = null
-	static url = ""
-	
-	private Browser browser
-	
-	@Delegate private NavigableSupport navigableSupport
-	@Delegate private DownloadSupport _downloadSupport 
-	@Delegate private WaitingSupport _waitingSupport
-	
-	@Delegate private final TextMatchingSupport textMatchingSupport = new TextMatchingSupport()
-	@Delegate private final AlertAndConfirmSupport  _alertAndConfirmSupport = new AlertAndConfirmSupport({ this.getJs() }) 
-	
-	Page init(Browser browser) {
-		this.browser = browser
-		def contentTemplates = PageContentTemplateBuilder.build(browser.config, this, 'content', this.class, Page)
-		navigableSupport = new FactoryNavigableSupport(this, contentTemplates, browser, { return Navigator.on(browser) })
-		_downloadSupport = new DownloadSupport(browser)
-		_waitingSupport = new WaitingSupport(browser.config)
-		this
-	}
-	
-	Browser getBrowser() {
-		browser
-	}
+    /**
+     * The "at checker" for this page.
+     * <p>
+     * Subclasses should define a closure here that verifies that the browser is at this page.
+     * <p>
+     * This implementation does not have an at checker (i.e. this property is {@code null})
+     */
+    static at = null
 
-	WebDriver getDriver() {
-		browser.driver
-	}
-	
-	String toString() {
-		this.class.simpleName
-	}
-	
-	boolean verifyAt() {
-		def verifier = this.class.at?.clone()
-		if (verifier) {
-			verifier.delegate = this
-			verifier.resolveStrategy = Closure.DELEGATE_FIRST
-			verifier()
-		} else {
-			true
-		}
-	}
-	
-	boolean verifyAtSafely() {
-		try {
-			verifyAt()
-		} catch (AssertionError e) {
-			false
-		}
-	}
-	
-	def to(Map params, Object[] args) {
-		def path = convertToPath(*args)
-		if (path == null) {
-			path = ""
-		}
-		browser.go(params, getPageUrl(path))
-		browser.page(this)
-	}
-	
-	def getPageUrl() {
-		this.class.url
-	}
-	
-	def getPageUrl(String path) {
-		def pageUrl = getPageUrl()
-		path ? (pageUrl ? "$pageUrl/$path" : path) : pageUrl
-	}
-	
-	def convertToPath(Object[] args) {
-		args ? args*.toString().join('/') : ""
-	}	
-	
-	def getTitle() {
-		browser.driver.title
-	}
-	
-	JavascriptInterface getJs() {
-		browser.js
-	}
-	
-	def onLoad(Page previousPage) {
-		
-	}
-	
-	def onUnload(Page nextPage) {
-		
-	}
+    /**
+     * Defines the url for this page to be used when navigating directly to this page.
+     * <p>
+     * Subclasses can specify either an absolute url, or one relative to the browser's base url.
+     * <p>
+     * This implementation returns an empty string.
+     *
+     * @see #to(java.util.Map, geb.url.UrlFragment, java.lang.Object)
+     */
+    static url = ""
+
+    /**
+     * The wait time configuration for 'at' checking specific to this page.
+     * <p>
+     * Subclasses can specify atCheckWaiting value, value specified in page takes priority over the global atCheckWaiting setting.
+     * <p>
+     * Possible values for the atCheckWaiting option are consistent with the ones for wait option of content definitions.
+     * <p>
+     * This implementation does not have any value for atCheckWaiting (i.e. this property is {@code null}).
+     */
+    static atCheckWaiting = null
+
+    /**
+     * Defines the url fragment for this page to be used when navigating directly to this page.
+     * <p>
+     * Subclasses can specify either a {@code String} which will be used as is or a {@code Map} which will be translated into an application/x-www-form-urlencoded {@code String}.
+     * The value used will be escaped appropriately so there is no need to escape it yourself.
+     * <p>
+     * This implementation does not define a page fragment (i.e. this property is {@code null})
+     *
+     * @see #to(java.util.Map, geb.url.UrlFragment, java.lang.Object)
+     */
+    static fragment = null
+
+    private Browser browser
+
+    @Delegate
+    private PageContentSupport pageContentSupport = new UninitializedPageContentSupport(this)
+
+    @Delegate
+    private DownloadSupport downloadSupport = new UninitializedDownloadSupport(this)
+
+    private WaitingSupport waitingSupport = new UninitializedWaitingSupport(this)
+
+    @Delegate
+    private FrameSupport frameSupport = new UninitializedFrameSupport(this)
+
+    @Delegate(parameterAnnotations = true)
+    private InteractionsSupport interactionsSupport = new UninitializedInteractionSupport(this)
+
+    @Delegate
+    @SuppressWarnings("UnusedPrivateField")
+    private final TextMatchingSupport textMatchingSupport = new TextMatchingSupport()
+
+    @Delegate
+    private AlertAndConfirmSupport alertAndConfirmSupport = new UninitializedAlertAndConfirmSupport(this)
+
+    //manually delegating here because @Delegate doesn't work with cross compilation http://jira.codehaus.org/browse/GROOVY-6865
+    private Navigable navigableSupport = new UninitializedNavigableSupport(this)
+
+    /**
+     * Initialises this page instance, connecting it to the browser.
+     * <p>
+     * <b>This method is called internally, and should not be called by users of Geb.</b>
+     */
+    @SuppressWarnings('SpaceBeforeOpeningBrace')
+    Page init(Browser browser) {
+        this.browser = browser
+        def contentTemplates = PageContentTemplateBuilder.build(browser, this, browser.navigatorFactory, 'content', this.class, Page)
+        pageContentSupport = new DefaultPageContentSupport(this, contentTemplates, browser.navigatorFactory)
+        navigableSupport = new NavigableSupport(browser.navigatorFactory)
+        downloadSupport = new DefaultDownloadSupport(browser)
+        waitingSupport = new DefaultWaitingSupport(browser.config)
+        frameSupport = new DefaultFrameSupport(browser)
+        interactionsSupport = new DefaultInteractionsSupport(browser)
+        alertAndConfirmSupport = new DefaultAlertAndConfirmSupport({ this.getJs() }, browser.config)
+        this
+    }
+
+    /**
+     * The browser that the page is connected to.
+     */
+    Browser getBrowser() {
+        browser
+    }
+
+    private Browser getInitializedBrowser() {
+        if (browser == null) {
+            throw uninitializedException()
+        }
+        browser
+    }
+
+    /**
+     * The driver of the browser that the page is connected to.
+     */
+    WebDriver getDriver() {
+        getInitializedBrowser().driver
+    }
+
+    /**
+     * Returns the name of this class.
+     *
+     * @see Class#getName()
+     */
+    String toString() {
+        this.class.name
+    }
+
+    /**
+     * Checks if the browser is not at an unexpected page and then executes this page's "at checker".
+     *
+     * @return whether the at checker succeeded or not.
+     * @see #verifyAtSafely(boolean)
+     * @throws AssertionError if this page's "at checker" doesn't pass (with implicit assertions enabled)
+     * @throws UnexpectedPageException when at an unexpected page
+     */
+    boolean verifyAt() {
+        def verificationResult = getAtVerificationResult(true)
+        if (!verificationResult) {
+            getInitializedBrowser().checkIfAtAnUnexpectedPage(getClass())
+            verificationResult.rethrowAnyErrors()
+        }
+        verificationResult
+    }
+
+    /**
+     * Executes this page's "at checker", suppressing any AssertionError that is thrown
+     * and returning false.
+     *
+     * @return whether the at checker succeeded or not.
+     * @see #verifyAt()
+     */
+    boolean verifyAtSafely(boolean honourGlobalAtCheckWaiting = true) {
+        getAtVerificationResult(honourGlobalAtCheckWaiting)
+    }
+
+    /**
+     * Executes this page's "at checker" and captures the result wrapping up any AssertionError that might have been thrown.
+     *
+     * @return at verification result with any AssertionError that might have been thrown wrapped up
+     * @see AtVerificationResult
+     */
+    AtVerificationResult getAtVerificationResult(boolean honourGlobalAtCheckWaiting = true) {
+        Throwable caughtException = null
+        boolean atResult = false
+        try {
+            atResult = verifyThisPageAtOnly(honourGlobalAtCheckWaiting)
+        } catch (AssertionError e) {
+            caughtException = e
+        }
+        new AtVerificationResult(atResult, caughtException)
+    }
+
+    /**
+     * Executes this page's "at checker".
+     *
+     * @return whether the at checker succeeded or not.
+     * @throws AssertionError if this page's "at checker" doesn't pass (with implicit assertions enabled)
+     */
+    private boolean verifyThisPageAtOnly(boolean honourGlobalAtCheckWaiting) {
+        Closure verifier = getClass().at?.clone()
+        if (verifier) {
+            verifier.delegate = this
+            verifier.resolveStrategy = Closure.DELEGATE_FIRST
+            def atCheckWaiting = getEffectiveAtCheckWaiting(honourGlobalAtCheckWaiting)
+            if (atCheckWaiting) {
+                atCheckWaiting.waitFor(verifier)
+            } else {
+                verifier()
+            }
+        } else {
+            throw new UndefinedAtCheckerException(this.class.name)
+        }
+    }
+
+    /**
+     * Sends the browser to this page's url.
+     *
+     * @param params query parameters to be appended to the url
+     * @param fragment optional url fragment identifier
+     * @param args "things" that can be used to generate an extra path to append to this page's url
+     * @see #convertToPath(java.lang.Object)
+     * @see #getPageUrl(java.lang.String)
+     */
+    void to(Map params, UrlFragment fragment = null, Object[] args) {
+        def path = convertToPath(*args)
+        if (path == null) {
+            path = ""
+        }
+        getInitializedBrowser().go(params, getPageUrl(path), fragment ?: getPageFragment())
+        getInitializedBrowser().page(this)
+    }
+
+    /**
+     * Returns the constant part of the url to this page.
+     * <p>
+     * This implementation returns the static {@code url} property of the class.
+     */
+    String getPageUrl() {
+        this.class.url
+    }
+
+    /**
+     * Returns the fragment part of the url to this page.
+     * <p>
+     * This implementation returns the static {@code fragment} property of the class wrapped in a {@code UrlFragment} instance.
+     *
+     * @see geb.url.UrlFragment
+     */
+    UrlFragment getPageFragment() {
+        this.class.fragment ? UrlFragment.of(this.class.fragment) : null
+    }
+
+    /**
+     * Returns the url to this page, with path appended to it.
+     *
+     * @see #getPageUrl()
+     */
+    String getPageUrl(String path) {
+        def pageUrl = getPageUrl()
+        path ? (pageUrl ? pageUrl + path : path) : pageUrl
+    }
+
+    /**
+     * Converts the arguments to a path to be appended to this page's url.
+     * <p>
+     * This is called by the {@link #to(java.util.Map, geb.url.UrlFragment, java.lang.Object)} method and can be used for accessing variants of the page.
+     * <p>
+     * This implementation returns the string value of each argument, separated by "/"
+     */
+    // tag::convert_to_path[]
+    String convertToPath(Object[] args) {
+        args ? '/' + args*.toString().join('/') : ""
+    }
+    // end::convert_to_path[]
+
+    /**
+     * Returns the title of the current browser window.
+     *
+     * @see org.openqa.selenium.WebDriver#getTitle()
+     */
+    String getTitle() {
+        getInitializedBrowser().driver.title
+    }
+
+    /**
+     * Provides access to the browser object's JavaScript interface.
+     *
+     * @see geb.Browser#getJs()
+     */
+    JavascriptInterface getJs() {
+        getInitializedBrowser().js
+    }
+
+    /**
+     * Lifecycle method called when the page is connected to the browser.
+     * <p>
+     * This implementation does nothing.
+     *
+     * @param previousPage The page that was active before this one
+     */
+    @SuppressWarnings(["UnusedMethodParameter", "EmptyMethod"])
+    void onLoad(Page previousPage) {
+    }
+
+    /**
+     * Lifecycle method called when this page is being replaced as the browser's page instance.
+     * <p>
+     * This implementation does nothing.
+     *
+     * @param nextPage The page that will be active after this one
+     */
+    @SuppressWarnings(["UnusedMethodParameter", "EmptyMethod"])
+    void onUnload(Page nextPage) {
+    }
+
+    private Wait getGlobalAtCheckWaiting(boolean honourGlobalAtCheckWaiting) {
+        honourGlobalAtCheckWaiting ? getInitializedBrowser().config.atCheckWaiting : null
+    }
+
+    private Wait getEffectiveAtCheckWaiting(boolean honourGlobalAtCheckWaiting) {
+        getClass().atCheckWaiting != null ? pageLevelAtCheckWaiting : getGlobalAtCheckWaiting(honourGlobalAtCheckWaiting)
+    }
+
+    protected Wait getPageLevelAtCheckWaiting() {
+        def atCheckWaitingValue = getClass().atCheckWaiting
+        getInitializedBrowser().config.getWaitForParam(atCheckWaitingValue)
+    }
+
+    Navigator find() {
+        navigableSupport.find()
+    }
+
+    Navigator $() {
+        navigableSupport.$()
+    }
+
+    Navigator find(int index) {
+        navigableSupport.find(index)
+    }
+
+    Navigator find(Range<Integer> range) {
+        navigableSupport.find(range)
+    }
+
+    Navigator $(int index) {
+        navigableSupport.$(index)
+    }
+
+    Navigator $(Range<Integer> range) {
+        navigableSupport.$(range)
+    }
+
+    Navigator find(String selector) {
+        navigableSupport.find(selector)
+    }
+
+    Navigator $(String selector) {
+        navigableSupport.$(selector)
+    }
+
+    Navigator find(String selector, int index) {
+        navigableSupport.find(selector, index)
+    }
+
+    Navigator find(String selector, Range<Integer> range) {
+        navigableSupport.find(selector, range)
+    }
+
+    Navigator $(String selector, int index) {
+        navigableSupport.$(selector, index)
+    }
+
+    Navigator $(String selector, Range<Integer> range) {
+        navigableSupport.$(selector, range)
+    }
+
+    Navigator find(Map<String, Object> attributes) {
+        navigableSupport.find(attributes)
+    }
+
+    Navigator $(Map<String, Object> attributes) {
+        navigableSupport.$(attributes)
+    }
+
+    Navigator find(Map<String, Object> attributes, int index) {
+        navigableSupport.find(attributes, index)
+    }
+
+    Navigator find(Map<String, Object> attributes, Range<Integer> range) {
+        navigableSupport.find(attributes, range)
+    }
+
+    Navigator $(Map<String, Object> attributes, int index) {
+        navigableSupport.$(attributes, index)
+    }
+
+    Navigator $(Map<String, Object> attributes, Range<Integer> range) {
+        navigableSupport.$(attributes, range)
+    }
+
+    Navigator find(Map<String, Object> attributes, String selector) {
+        navigableSupport.find(attributes, selector)
+    }
+
+    Navigator $(Map<String, Object> attributes, String selector) {
+        navigableSupport.$(attributes, selector)
+    }
+
+    Navigator find(Map<String, Object> attributes, String selector, int index) {
+        navigableSupport.$(attributes, selector, index)
+    }
+
+    Navigator find(Map<String, Object> attributes, String selector, Range<Integer> range) {
+        navigableSupport.find(attributes, selector, range)
+    }
+
+    Navigator $(Map<String, Object> attributes, String selector, int index) {
+        navigableSupport.$(attributes, selector, index)
+    }
+
+    Navigator $(Map<String, Object> attributes, String selector, Range<Integer> range) {
+        navigableSupport.$(attributes, selector, range)
+    }
+
+    Navigator $(Map<String, Object> attributes, By bySelector) {
+        navigableSupport.find(attributes, bySelector)
+    }
+
+    Navigator find(Map<String, Object> attributes, By bySelector) {
+        navigableSupport.find(attributes, bySelector)
+    }
+
+    Navigator $(Map<String, Object> attributes, By bySelector, int index) {
+        navigableSupport.find(attributes, bySelector, index)
+    }
+
+    Navigator find(Map<String, Object> attributes, By bySelector, int index) {
+        navigableSupport.find(attributes, bySelector, index)
+    }
+
+    Navigator $(Map<String, Object> attributes, By bySelector, Range<Integer> range) {
+        navigableSupport.find(attributes, bySelector, range)
+    }
+
+    Navigator find(Map<String, Object> attributes, By bySelector, Range<Integer> range) {
+        navigableSupport.find(attributes, bySelector, range)
+    }
+
+    Navigator $(By bySelector) {
+        navigableSupport.find(bySelector)
+    }
+
+    Navigator find(By bySelector) {
+        navigableSupport.find(bySelector)
+    }
+
+    Navigator $(By bySelector, int index) {
+        navigableSupport.find(bySelector, index)
+    }
+
+    Navigator find(By bySelector, int index) {
+        navigableSupport.find(bySelector, index)
+    }
+
+    Navigator $(By bySelector, Range<Integer> range) {
+        navigableSupport.find(bySelector, range)
+    }
+
+    Navigator find(By bySelector, Range<Integer> range) {
+        navigableSupport.find(bySelector, range)
+    }
+
+    Navigator $(Navigator[] navigators) {
+        navigableSupport.$(navigators)
+    }
+
+    Navigator $(WebElement[] elements) {
+        navigableSupport.$(elements)
+    }
+
+    @Override
+    <T extends Module> T module(Class<T> moduleClass) {
+        navigableSupport.module(moduleClass)
+    }
+
+    @Override
+    <T extends Module> T module(T module) {
+        navigableSupport.module(module)
+    }
+
+    @Override
+    def <T> T waitFor(Map params = [:], String waitPreset, Closure<T> block) {
+        waitingSupport.waitFor(params, waitPreset, block)
+    }
+
+    @Override
+    def <T> T waitFor(Map params = [:], Closure<T> block) {
+        waitingSupport.waitFor(params, block)
+    }
+
+    @Override
+    def <T> T waitFor(Map params = [:], Double timeout, Closure<T> block) {
+        waitingSupport.waitFor(params, timeout, block)
+    }
+
+    @Override
+    def <T> T waitFor(Map params = [:], Double timeout, Double interval, Closure<T> block) {
+        waitingSupport.waitFor(params, timeout, interval, block)
+    }
+
+    /**
+     * Uses the {@link geb.Configuration#getDefaultWait() default wait} from the {@code configuration} to
+     * wait for {@code block} to return a true value according to the Groovy Truth.
+     * The page is reloaded using {@code WebDriver.Navigation#refresh()} before each evaluation of {@code block}.
+     *
+     * @param block what is to be waited on to return a true-ish value
+     * @return the true-ish return value from {@code block}
+     * @throws {@link geb.waiting.WaitTimeoutException} if the block does not produce a true-ish value in time
+     * @see geb.Configuration#getDefaultWait()
+     */
+    public <T> T refreshWaitFor(Map params = [:], Closure<T> block) {
+        waitingSupport.waitFor(params, withRefresh(block))
+    }
+
+    /**
+     * Uses the {@link geb.Configuration#getWaitPreset(java.lang.String) wait preset} from the {@code configuration}
+     * with the given name to to wait for {@code block} to return a true value according to the Groovy Truth.
+     * The page is reloaded using {@code WebDriver.Navigation#refresh()} before each evaluation of {@code block}.
+     *
+     * @param waitPreset the name of the wait preset in {@code configuration} to use
+     * @param block what is to be waited on to return a true-ish value
+     * @return the true-ish return value from {@code block}
+     * @throws {@link geb.waiting.WaitTimeoutException} if the block does not produce a true-ish value in time
+     * @see geb.Configuration#getWaitPreset(java.lang.String)
+     */
+    public <T> T refreshWaitFor(Map params = [:], String waitPreset, Closure<T> block) {
+        waitingSupport.waitFor(params, waitPreset, withRefresh(block))
+    }
+
+    /**
+     * Invokes {@code block} every {@link geb.Configuration#getDefaultWaitRetryInterval()} seconds, until it returns
+     * a true value according to the Groovy Truth, waiting at most {@code timeout} seconds.
+     * The page is reloaded using {@code WebDriver.Navigation#refresh()} before each evaluation of {@code block}.
+     *
+     * @param timeout the number of seconds to wait for block to return (roughly)
+     * @param block what is to be waited on to return a true-ish value
+     * @return the true-ish return value from {@code block}
+     * @throws {@link geb.waiting.WaitTimeoutException} if the block does not produce a true-ish value in time
+     */
+    public <T> T refreshWaitFor(Map params = [:], Double timeout, Closure<T> block) {
+        waitingSupport.waitFor(params, timeout, withRefresh(block))
+    }
+
+    /**
+     * Invokes {@code block} every {@code interval} seconds, until it returns
+     * a true value according to the Groovy Truth, waiting at most {@code timeout} seconds.
+     * The page is reloaded using {@code WebDriver.Navigation#refresh()} before each evaluation of {@code block}.
+     *
+     * @param interval the number of seconds to wait between invoking {@code block}
+     * @param timeout the number of seconds to wait for block to return (roughly)
+     * @param block what is to be waited on to return a true-ish value
+     * @return the true-ish return value from {@code block}
+     * @throws {@link geb.waiting.WaitTimeoutException} if the block does not produce a true-ish value in time
+     */
+    public <T> T refreshWaitFor(Map params = [:], Double timeout, Double interval, Closure<T> block) {
+        waitingSupport.waitFor(params, timeout, interval, withRefresh(block))
+    }
+
+    private <T> Closure<T> withRefresh(Closure<T> block) {
+        { ->
+            browser.driver.navigate().refresh()
+            block.call()
+        }
+    }
+
+    GebException uninitializedException() {
+        def message = "Instance of page ${getClass()} has not been initialized. Please pass it to Browser.to(), Browser.via(), Browser.page() or Browser.at() before using it."
+        new PageInstanceNotInitializedException(message)
+    }
 }

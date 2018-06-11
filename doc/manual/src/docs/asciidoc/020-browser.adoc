@@ -1,0 +1,496 @@
+[[browser]]
+= The `Browser`
+
+The entry point to Geb is the `{browser-api}` object.
+A browser object marries a `{webdriver-api}` instance (which drives the actual web browser being automated) with the concept of a “current page”.
+
+Browser objects are created with a `{configuration-api}` that specifies which driver implementation to use, the base URL to resolve relative links against and other bits of config.
+The configuration mechanism allows you to externalise how Geb should operate, which means you can use the same suite of Geb code or tests with different browsers or site instances.
+The <<configuration,chapter on configuration>> contains more details on how to manage the configuration parameters and what they are.
+
+The default constructor of `{browser-api}` simply loads its settings from the config mechanism.
+
+[source,groovy]
+----
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=imports]
+
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=creation,indent=0]
+----
+
+However, if you prefer to specify the driver implementation (or any other settable property on the `{browser-api}`) you can by using Groovy's map constructor syntax.
+
+[source,groovy]
+----
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=driver_imports]
+
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=setting_driver_in_constructor,indent=0]
+----
+
+Which is the same as…
+
+[source,groovy]
+----
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=setting_driver,indent=0]
+----
+
+Any property set this way will *override* any settings coming from the config mechanism.
+
+[IMPORTANT]
+====
+The behaviour is undefined if a browser's driver is changed after its first use, so you should avoid setting the driver this way and prefer the configuration mechanism.
+====
+
+For drastically custom configuration requirements, you can create your own `{configuration-api}` object and construct the browser with it,
+likely using the link:api/geb/ConfigurationLoader.html[configuration loader].
+
+[source,groovy]
+----
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=imports]
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=configuration_imports]
+
+include::{test-dir}/browser/BrowserCreationSpec.groovy[tag=configuration_construction,indent=0]
+----
+
+Wherever possible, you should strive to use the no-arg constructor and manage Geb through the inbuilt <<configuration,configuration mechanism>> as it offers a great deal of flexibility
+and separates your configuration from your code.
+
+[NOTE]
+====
+Geb integrations typically remove the need to construct a browser object and do this for you, leaving you to just manage the configuration.
+====
+
+[[drive]]
+== The `drive()` method
+
+The Browser class features a static method, `{drive-method-api}`, that makes Geb scripting a little more convenient.
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/DriveSpec.groovy[tag=using_drive]
+----
+
+Which is equivalent to:
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/DriveSpec.groovy[tag=explicit]
+----
+
+The `drive()` method takes all of the arguments that the `{browser-api}` constructor takes (i.e. none, a `{configuration-api}` and/or property overrides) or an existing browser instance,
+and a closure.
+The closure is evaluated against created browser instance (i.e. the browser is made the _delegate_ of the closure).
+The net result is that all top level method calls and property accesses are implied to be against the browser.
+
+The `drive()` method always returns the browser object that was used, so if you need to quit the browser after the drive session you can do something like…
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/QuitSpec.groovy[tag=quit]
+----
+
+[TIP]
+====
+For more on when/why you need to manually quit the browser, see the section on the <<driver,driver>>.
+====
+
+== Making requests
+
+[[base-url]]
+=== The base URL
+
+Browser instances maintain a link:api/geb/Browser.html#getBaseUrl()[`baseUrl`] property that is used to resolve all relative URLs.
+This value can come from <<base-url,configuration>> or can be link:api/geb/Browser.html#setBaseUrl(java.lang.String)[explicitly set] on the browser.
+
+Care must be taken with slashes when specifying both the base URL and the relative URL as trailing and leading slashes have significant meaning.
+The following table illustrates the resolution of different types of URLs.
+
+|===
+|Base |Navigating To |Result
+
+|\http://myapp.com/ |abc |\http://myapp.com/abc
+|\http://myapp.com |abc |\http://myapp.comabc
+|\http://myapp.com |/abc |\http://myapp.com/abc
+|\http://myapp.com/abc/ |def |\http://myapp.com/abc/def
+|\http://myapp.com/abc |def |\http://myapp.com/def
+|\http://myapp.com/abc/ |/def |\http://myapp.com/def
+|\http://myapp.com/abc/def/ |jkl |\http://myapp.com/abc/def/jkl
+|\http://myapp.com/abc/def |jkl |\http://myapp.com/abc/jkl
+|\http://myapp.com/abc/def |/jkl |\http://myapp.com/jkl
+|===
+
+It is usually most desirable to define your base urls with trailing slashes and not to use leading slashes on relative URLs.
+
+[[using-pages]]
+=== Using pages
+
+Page objects (<<the-page, discussed further shortly>>) can define a url that will be used when explicitly navigating to that page.
+This is done with the link:api/geb/Browser.html#to(java.util.Map,%20Class%3CT%3E,%20java.lang.Object)[`to()`] and link:api/geb/Browser.html#via(java.util.Map,%20Class%3CT%3E,%20java.lang.Object)[`via()`] methods.
+
+[source,groovy]
+----
+include::{test-dir}/browser/PageSpec.groovy[tag=signup_page]
+
+include::{test-dir}/browser/PageSpec.groovy[tag=using_pages,indent=0]
+----
+
+The `to()` and `via()` method makes a request to the resolved URL and sets the browser's page instance to an instance of the given class. Most Geb scripts and tests start with a `to()` or `via()` call.
+
+[TIP]
+====
+See the section on <<advanced-page-navigation,advanced page navigation>> for more information on how to use more complicated URL resolution for pages.
+====
+
+=== Direct
+
+You can also make a new request to a URL without setting or changing the page using the link:api/geb/Browser.html#go(java.lang.String)[`go()`] methods.
+
+[source,groovy]
+----
+include::{test-dir}/browser/GoogleSpec.groovy[tag=class]
+----
+
+The following examples use a baseUrl of “`\http://localhost/`”.
+
+[source,groovy]
+----
+include::{test-dir}/browser/GoSpec.groovy[tag=examples,indent=0]
+----
+<1> Go to the base URL.
+<2> Go to a URL relative to base URL.
+<3> Go to a URL with request params i.e `+http://localhost/signup?param1=value1&param2=value2+`
+
+[[the-page]]
+== The `Page`
+
+Browser instances hold a reference to a _page_. This page instance is retrievable via the link:api/geb/Browser.html#getPage()[`page`] property.
+Initially, all browser instances have a page of type link:api/geb/Page.html[`Page`] which provides the basic navigation functions and is the superclass for all page objects.
+
+However, the page property is rarely accessed directly.
+The browser object will _forward_ any method calls or property read/writes that it can't handle to the current page instance.
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/DriveSpec.groovy[tag=browser_delegates_to_page]
+----
+<1> These two calls are equivalent.
+
+The _page_ is providing the `$()` function, not the browser. This forwarding facilitates very concise code, void of unnecessary noise.
+
+[NOTE]
+====
+For more information on the `$()` function which is used to interact with page content, see the section on the <<navigator,Navigator API>>.
+====
+
+When using the Page Object pattern, you create subclasses of link:api/geb/Page.html[`Page`] that define content via a powerful DSL that allows you to refer to content by meaningful names instead of
+tag names or CSS expressions.
+
+[source,groovy]
+----
+include::{test-dir}/browser/PageSpec.groovy[tag=signup_page_with_content,indent=0]
+
+include::{test-dir}/browser/PageSpec.groovy[tag=using_pages_content,indent=0]
+----
+
+Page objects are discussed in depth in the <<pages>> chapter, which also explores the Content DSL.
+
+:numbered!:
+
+[[changing-pages]]
+=== Changing the page
+
+We have already seen that that `to()` methods change the browser's page instance.
+It is also possible to change the page instance without initiating a new request with the `page()` methods.
+
+The `{page-method-taking-class-api}` method allows you to change the page to a new instance of *the given class*.
+The class must be `{page-api}` or a subclass thereof.
+This method *does not* verify that the given page actually matches the content (at checking is discussed shortly).
+
+The `{page-method-taking-instance-api}` method allows you to change the page to *the given instance*.
+Similarly to the method taking a page class it *does not* verify that the given page actually matches the content.
+
+The `{page-method-taking-classes-array-api}` method allows you to specify a number of _potential_ page types.
+Each of the potential pages is instantiated and checked to see if it matches the content the browser is actually currently at by running each page's at checker.
+All of the page classes passed in must have an “at” checker defined otherwise an `UndefinedAtCheckerException` will be thrown.
+
+The `{page-method-taking-instances-array-api}` method allows you to specify a number of _potential_ page instances.
+Each of the potential page instances is initialized and checked to see if it matches the content the browser is actually currently at by running each pages at checker.
+All of the page instances passed in must have an “at” checker defined otherwise an `UndefinedAtCheckerException` will be thrown.
+
+These two methods taking arrays as arguments are not typically used explicitly but are used by the `to()` method and content definitions that specify the page that the content navigates to when
+clicked (see the section on the <<content-dsl-to,`to` attribute of the Content DSL>> for more information about this).
+However, should you need to manually change the page type, they are there.
+
+:numbered:
+
+== At checking
+
+Pages define an <<at-checker,“at checker”>> that the browser uses for checking if it is pointing at a given page.
+
+[source,groovy]
+----
+include::{test-dir}/browser/PageSpec.groovy[tag=signup_page_with_at_checker,indent=0]
+
+include::{test-dir}/browser/PageSpec.groovy[tag=using_to,indent=0]
+----
+
+[WARNING]
+====
+Not using explicit `return` statements in “at checkers” is preferred.
+Geb transforms all “at checkers” so that each statement in them is asserted (just like for `then:` blocks in Spock specifications).
+Thanks to that you can immediately see evaluated values of your “at checker” if it fails.
+See the <<at-checker,“at checker”>> section for more details.
+====
+
+The `to()` method that takes a single page type or instance *verifies* that the browser ends up at the given page.
+If the request may initiate a redirect and take the browser to a different page you should use `{via-method-api}` method:
+
+[source,groovy]
+----
+include::{test-dir}/browser/ViaSpec.groovy[tag=using_via,indent=0]
+----
+
+Browser objects have `{at-method-taking-class-api}` and `{at-method-taking-instance-api}` methods that test whether or not the browser is currently at the page modeled by the given page
+class or instance.
+
+The `at AccessDeniedPage` method call return a page instance if the “at checker” is fulfilled.
+If on the other hand it is not then an `AssertionError` will be thrown even if there are no explicit assertions in the “at checker” (the default, see the section on <<implicit-assertions>> for
+details) or return null if implicit assertions are disabled.
+
+It's always a good idea to either use the `to()` method which implicitly verifies the “at checker” or the `via()` method followed by an `at()` check whenever the page changes in order to _fail fast_.
+Otherwise, subsequent steps may fail in harder to diagnose ways due to the content not matching what is expected and content look-ups returning strange results.
+
+If you pass a page class or instance  that doesn't define an “at checker” to `at()` you will get an `UndefinedAtCheckerException` - “at checkers” are mandatory when doing explicit “at checks”.
+This is not the case when implicit “at checks” are being performed, like when using `to()`.
+This behaviour is intended to make you aware that you probably want to define an “at checker” when explicitly verifying if you're at a given page but not forcing you to do so when using implicit
+“at checking”.
+
+The `at()` method will also update the browser's page instance if the “at checker” is successful.
+This means that you don't have to manually set browser's page to the new one after “at checking”.
+
+Pages can also define content that declares what the browser's page type should change to when that content is clicked.
+After clicking on such content the declared page is automatically ”at checked” if it defines an “at checker” (see the content DSL reference for the <<content-dsl-to,`to`>> parameter).
+
+[source,groovy]
+----
+include::{test-dir}/browser/ContentDslToParameterSpec.groovy[tag=pages,indent=0]
+
+include::{test-dir}/browser/ContentDslToParameterSpec.groovy[tag=to_parameter,indent=0]
+----
+
+== Page change listening
+
+It is possible to be notified when a browser's page _instance_ changes (note that this is not necessarily when the browser makes a request to a new URL) using the
+link:api/geb/PageChangeListener.html[`PageChangeListener`] interface.
+
+As soon as a listener is registered, its `pageWillChange()` method will be called with `newPage` as the current page and `oldPage` as `null`.
+Subsequently, each time the page changes `oldPage` will be the page that the browser currently has, and `newPage` will be the page that will soon be the browser's page.
+
+[source,groovy]
+----
+include::{test-dir}/browser/PageChangeListenerSpec.groovy[tag=helper_classes,indent=0]
+
+include::{test-dir}/browser/PageChangeListenerSpec.groovy[tag=using_page_change_listener,indent=0]
+----
+
+You can remove a listener at any time…
+
+[source,groovy]
+----
+include::{test-dir}/browser/PageChangeListenerSpec.groovy[tag=removing_listener,indent=0]
+----
+
+The link:api/geb/Browser.html#removePageChangeListener(geb.PageChangeListener)[`removePageChangeListener(PageChangeListener listener)`] returns `true` if `listener` was registered and has now been
+removed, otherwise it returns `false`.
+
+Listeners cannot be registered twice.
+If an attempt is made to register a listener that is already registered (i.e. there is another listener that is _equal_ to the listener being registered, based on their `equals()` implementation)
+then a link:api/geb/error/PageChangeListenerAlreadyRegisteredException.html[`PageChangeListenerAlreadyRegisteredException`] will be raised.
+
+== Working with multiple tabs and windows
+
+When you're working with an application that opens new windows or tabs, for example when clicking on a link with a target attribute set, you can use `withWindow()` and `withNewWindow()` methods to
+execute code in the context of other windows.
+
+If you really need to know the name of the current window or all the names of open windows use link:api/geb/Browser.html#getCurrentWindow()[`Browser.getCurrentWindow()`] and
+link:api/geb/Browser.html#getAvailableWindows()[`Browser.getAvailableWindows()`] methods but `withWindow()` and `withNewWindow()` are the preferred methods when it comes to dealing with multiple
+windows.
+
+=== Already opened windows
+
+If you know the name of the window in context of which you want to execute the code you can use
+`link:api/geb/Browser.html#withWindow(java.lang.String,%20groovy.lang.Closure)["withWindow(String windowName, Closure block)"]`.
+
+Given that this HTML is rendered for the `baseUrl`:
+
+[source,html,indent=0]
+----
+include::{test-dir}/browser/WithWindowSpec.groovy[tag=using_name_html]
+----
+
+This code passes:
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/WithWindowSpec.groovy[tag=using_name]
+----
+
+If you don't know the name of the window but you know something about the content of the window you can use the
+`link:api/geb/Browser.html#withWindow(groovy.lang.Closure,%20groovy.lang.Closure)["withWindow(Closure specification, Closure block)"]` method.
+The first closure passed should return true for the window, or windows, you want to use as context for execution of the second closure.
+
+[WARNING]
+====
+If there is no window for which the window specification closure returns `true` then
+http://static.javadoc.io/org.seleniumhq.selenium/selenium-api/{selenium-version}/org/openqa/selenium/NoSuchWindowException.html[`NoSuchWindowException`] is thrown.
+====
+
+So given:
+
+[source,html,indent=0]
+----
+include::{test-dir}/browser/WithWindowSpec.groovy[tag=using_closure_html]
+----
+
+This code passes:
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/WithWindowSpec.groovy[tag=using_closure]
+----
+
+[NOTE]
+====
+If code of the closure passed as the last argument changes browser's current page instance
+(e.g. by using {page-method-taking-class-api-link}[`page(Page)`] or {at-method-taking-class-api-link}[`at(Page)`]) then it will be reverted to its original value after returning from
+`withWindow()`.
+====
+
+==== `withWindow()` options
+
+There are some additional options that can be passed to a link:api/geb/Browser.html#withWindow(java.util.Map,%20groovy.lang.Closure,%20groovy.lang.Closure)[`withWindow()`] call which make working
+with already opened windows even simpler. The general syntax is:
+
+[source,groovy]
+----
+withWindow(«window specification», «option name»: «option value», ...) {
+    «action executed within the context of the window»
+}
+----
+
+===== `close`
+
+Default value: `false`
+
+If you pass any _truthy_ value as the `close` option then all matching windows will be closed after the execution of the closure passed as the last argument to a `withWindow()` call.
+
+===== `page`
+
+Default value: `null`
+
+If you pass a class or an instance of a class that extends `Page` as `page` option, then browser's page will be set to that value before executing the closure passed as the last argument and will be
+reverted to its original value afterwards. If the page class defines an “at checker” then it will be verified when the page is set on the browser.
+
+=== Newly opened windows
+
+If you wish to execute code in a window that is newly opened by some of your actions, use the
+`link:api/geb/Browser.html#withNewWindow(groovy.lang.Closure,%20groovy.lang.Closure)["withNewWindow(Closure windowOpeningBlock, Closure block)"]` method.
+Given that this HTML is rendered for the `baseUrl`:
+
+[source,html,indent=0]
+----
+include::{test-dir}/browser/WithNewWindowSpec.groovy[tag=html]
+----
+
+The following will pass:
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/WithNewWindowSpec.groovy[tag=new_window]
+----
+
+[WARNING]
+====
+If the first parameter opens none or more than one window, then link:api/geb/error/NoNewWindowException.html[`NoNewWindowException`] is thrown.
+====
+
+[NOTE]
+====
+If code of the closure passed as the last argument changes browser's current page instance (e.g. by using {page-method-taking-class-api-link}[`page(Page)`] or
+{page-method-taking-class-api-link}[`at(Page)`]) then it will be reverted to its original value after returning from `withNewWindow()`.
+====
+
+==== `withNewWindow()` options
+
+There are several options that can be passed to a link:api/geb/Browser.html#withNewWindow(java.util.Map,%20groovy.lang.Closure,%20groovy.lang.Closure)[`withNewWindow()`] call which make working
+with newly opened windows even simpler. The general syntax is:
+
+[source,groovy]
+----
+withNewWindow({ «window opening action» }, «option name»: «option value», ...) {
+    «action executed within the context of the window»
+}
+----
+
+===== `close`
+
+Default value: `true`
+
+If you pass any _truthy_ value as `close` option then the newly opened window will be closed after the execution of the closure passed as the last argument to the `withNewWindow()` call.
+
+===== `page`
+
+Default value: `null`
+
+If you pass a class or an instance of a class that extends `Page` as `page` option then browser's page will be set to that value before executing the closure passed as the last argument and will be
+reverted to its original value afterwards.
+
+===== `wait`
+
+Default value: `null`
+
+You can specify `wait` option if the action defined in the window opening closure passed as the first argument is asynchronous and you need to wait for the new window to be opened.
+The possible values for the `wait` option are consistent with the <<content-dsl-wait,ones for `wait` option of content definitions>>.
+
+Given that the following HTML is rendered for the `baseUrl`:
+
+[source,html,indent=0]
+----
+include::{test-dir}/browser/WithNewWindowSpec.groovy[tag=waiting_html]
+----
+
+together with the following javascript:
+
+[source,javascript,indent=0]
+----
+include::{test-dir}/browser/WithNewWindowSpec.groovy[tag=js]
+----
+
+then the following will pass:
+
+[source,groovy,indent=0]
+----
+include::{test-dir}/browser/WithNewWindowSpec.groovy[tag=new_window_with_wait]
+----
+
+== Pausing and debugging
+It often proves useful to be able to pause the execution of code using Geb at some given point for debugging purposes. This can be achieved by either:
+
+* setting up a breakpoint in the IDE and running the JVM in debug mode
+* using Browser's link:api/geb/Browser.html#pause()[`pause()`] method
+
+While the former is more powerful in that it allows to inspect variable values in the JVM as well as use Geb's classes and methods where the breakpoint was set, the latter might be easier and quicker to setup and just being able to open developer console in the browser and inspect DOM and javascript variables in there is often sufficient to resolve the issue being debugged.
+
+[NOTE]
+====
+If you wish to continue execution after a call to `pause()` you will need to set the global javascript variable `geb.unpause` to `true`.
+This would usually be done by executing `geb.unpause = true;` in developer console of the browser being driven.
+
+Be aware that if the browser is reloaded or navigated to a new url between calling `pause()` and resuming the execution you will need to recreate the top level `geb` object before setting `geb.unpause` to `true`.
+This can be simply done by executing `geb = {};` in the console.
+====
+
+[[quitting-the-browser]]
+== Quitting the browser
+
+The browser object has link:api/geb/Browser.html#quit()[`quit()`] and link:api/geb/Browser.html#close()[`close()`] methods (that simply delegate to the underlying driver).
+See the section on <<driver-management,driver management>> for more information on when and why you need to quit the browser.

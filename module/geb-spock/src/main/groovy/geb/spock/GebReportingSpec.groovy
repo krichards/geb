@@ -14,51 +14,49 @@
  */
 package geb.spock
 
-import geb.report.*
-import spock.lang.*
+import geb.report.ReporterSupport
 import org.junit.Rule
 import org.junit.rules.TestName
+import spock.lang.Shared
 
 class GebReportingSpec extends GebSpec {
 
-	// Ridiculous name to avoid name clashes
-	@Rule _gebReportingSpecTestName = new TestName()
-	def _gebReportingPerTestCounter = 0
-	@Shared _gebReportingSpecTestCounter = 0
-	@Shared _getReportingSpecReporter = null
-	
-	def cleanup() {
-		report("end")
-	}
+    // Ridiculous name to avoid name clashes
+    @Rule
+    TestName gebReportingSpecTestName
+    private int gebReportingPerTestCounter = 1
+    @Shared
+    private int gebReportingSpecTestCounter = 1
 
-	void report(String label) {
-		// We have to do this lazily here so the subclass gets a chance to run _some_ code to setup the reporter if need be.
-		// If we used setupSpec() that would run before the subclasses setupSpec() and limit the users options.
-		if (_gebReportingSpecTestCounter++ == 0) {
-			_getReportingSpecReporter = createReporter()
-		}
-		
-		def name = "${_gebReportingSpecTestCounter}-${++_gebReportingPerTestCounter}-${_gebReportingSpecTestName.methodName}"
-		if (label) {
-			name += "-$label"
-		}
-		
-		_getReportingSpecReporter?.writeReport(name, getBrowser())
-	}
+    def setupSpec() {
+        reportGroup getClass()
+        cleanReportGroupDir()
+    }
 
-	/**
-	 * Subclasses can override this to use a different reporter
-	 */
-	Reporter createReporter() {
-		def reportDir = getReportDir()
-		reportDir ? new ScreenshotAndPageSourceReporter(reportDir, this.class, true) : null
-	}
-	
-	/**
-	 * Subclasses override this to determine where the reports are written
-	 */
-	File getReportDir() {
-		browser.config.reportsDir
-	}
+    def setup() {
+        reportGroup getClass()
+    }
+
+    def cleanup() {
+        if (_browser && !browser.config.reportOnTestFailureOnly) {
+            report "end"
+        }
+
+        ++gebReportingSpecTestCounter
+    }
+
+    void reportFailure() {
+        if (_browser) {
+            report "failure"
+        }
+    }
+
+    void report(String label = "") {
+        browser.report(createReportLabel(label))
+    }
+
+    String createReportLabel(String label = "") {
+        ReporterSupport.toTestReportLabel(gebReportingSpecTestCounter, gebReportingPerTestCounter++, gebReportingSpecTestName?.methodName ?: 'fixture', label)
+    }
 
 }

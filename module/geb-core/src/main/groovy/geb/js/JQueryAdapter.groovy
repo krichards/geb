@@ -19,50 +19,52 @@ import geb.navigator.Navigator
 
 class JQueryAdapter {
 
-	private final Navigator navigator
-	
-	JQueryAdapter(Navigator navigator) {
-		this.navigator = navigator
-	}
-	
-	private _callJQueryMethod(String name, args) {
-		def browser = navigator.browser
-		def elements = navigator.allElements()
-		
-		if (elements) {
-			browser.js.exec(*elements, "EOE", *args, """
-				var elements = new Array();
-				var callArgs = new Array();
-				var collectingElements = true;
+    private final Navigator navigator
 
-				for (j = 0; j < arguments.length; ++j) {
-					var arg = arguments[j];
+    JQueryAdapter(Navigator navigator) {
+        this.navigator = navigator
+    }
 
-					if (collectingElements == true && arg == "EOE") {
-						collectingElements = false;
-					} else if (collectingElements) {
-						elements.push(arg);
-					} else {
-						callArgs.push(arg);
-					}
-				}
-				
-				var o = jQuery(elements);
-				var r = o.${name}.apply(o, callArgs);
-				return (typeof r == "object") ? r.toArray() : r;
-			""")
-		} else {
-			null
-		}
-	}
-	
-	def methodMissing(String name, args) {
-		def result = _callJQueryMethod(name, args)
-		if (result instanceof WebElement || result instanceof List) {
-			Navigator.on(navigator.browser, result)
-		} else {
-			result
-		}
-	}
+    private callJQueryMethod(String name, args) {
+        def browser = navigator.browser
+        def elements = navigator.allElements()
+
+        if (elements) {
+            browser.js.exec(*elements, "EOE", *args, """
+                var elements = new Array();
+                var callArgs = new Array();
+                var collectingElements = true;
+
+                for (j = 0; j < arguments.length; ++j) {
+                    var arg = arguments[j];
+
+                    if (collectingElements == true && arg == "EOE") {
+                        collectingElements = false;
+                    } else if (collectingElements) {
+                        elements.push(arg);
+                    } else {
+                        callArgs.push(arg);
+                    }
+                }
+
+                var o = jQuery(elements);
+                var r = o.${name}.apply(o, callArgs);
+                return (r instanceof jQuery) ? r.toArray() : r;
+            """)
+        } else {
+            null
+        }
+    }
+
+    def methodMissing(String name, args) {
+        def result = callJQueryMethod(name, args)
+        if (result instanceof WebElement) {
+            navigator.browser.navigatorFactory.createFromWebElements(Collections.singletonList(result))
+        } else if (result instanceof List) {
+            navigator.browser.navigatorFactory.createFromWebElements(result)
+        } else {
+            result
+        }
+    }
 
 }

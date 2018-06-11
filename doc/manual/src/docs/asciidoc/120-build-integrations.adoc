@@ -1,0 +1,143 @@
+[[build-integrations]]
+= Build system &amp; framework integrations
+
+This kind of integration for Geb is typically focused on managing the base URL and reports dir, as build systems tend to be able to provide this configuration (via the
+<<build-adapter-config, build adapter>> mechanism).
+
+== Gradle
+
+Using Geb with Gradle simply involves pulling in the appropriate dependencies, and configuring the base URL and reports dir in the build script if they are necessary.
+
+Below is a valid Gradle `build.gradle` file for working with Geb for testing.
+
+[source,groovy,subs="attributes"]
+----
+apply plugin: "groovy"
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    gebVersion = "{geb-version}"
+    seleniumVersion = "{selenium-version}"
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:{groovy-version}"
+
+    // If using Spock, need to depend on geb-spock
+    testCompile "{geb-group}:geb-spock:$\{gebVersion\}"
+    testCompile "org.spockframework:spock-core:{spock-core-version}"
+
+    // If using JUnit, need to depend on geb-junit (3 or 4)
+    testCompile "{geb-group}:geb-junit4:$\{gebVersion\}"
+    testCompile "junit:junit-dep:4.8.2"
+
+    // Need a driver implementation
+    testCompile "org.seleniumhq.selenium:selenium-firefox-driver:$\{seleniumVersion\}"
+    testRuntime "org.seleniumhq.selenium:selenium-support:$\{seleniumVersion\}"
+}
+
+test {
+    systemProperties "geb.build.reportsDir": "$reportsDir/geb"
+}
+----
+
+There is a Gradle example project available.
+
+* link:https://github.com/geb/geb-example-gradle[geb-example-gradle]
+
+== Maven
+
+Using Geb with Maven simply involves pulling in the appropriate dependencies, and configuring the base URL and reports dir in the build script if they are necessary.
+
+Below is a valid `pom.xml` file for working with Geb for testing (with Spock).
+
+[source,xml,subs="+attributes"]
+----
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>{geb-group}.example</groupId>
+  <artifactId>geb-maven-example</artifactId>
+  <packaging>jar</packaging>
+  <version>1</version>
+  <name>Geb Maven Example</name>
+  <url>http://www.gebish.org</url>
+  <dependencies>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+      <version>{groovy-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.8.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.spockframework</groupId>
+      <artifactId>spock-core</artifactId>
+      <version>{spock-core-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>{geb-group}</groupId>
+      <artifactId>geb-spock</artifactId>
+      <version>{geb-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-firefox-driver</artifactId>
+      <version>{selenium-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-support</artifactId>
+      <version>{selenium-version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.18.1</version>
+        <configuration>
+          <includes>
+            <include>*Spec.*</include>
+          </includes>
+          <systemPropertyVariables>
+            <geb.build.baseUrl>http://google.com/ncr</geb.build.baseUrl>
+            <geb.build.reportsDir>target/test-reports/geb</geb.build.reportsDir>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>gmaven-plugin</artifactId>
+        <version>1.3</version>
+        <configuration>
+          <providerSelection>1.7</providerSelection>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+----
+
+There is a Maven example project available.
+
+* link:https://github.com/geb/geb-example-maven[geb-example-maven]

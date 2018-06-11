@@ -14,55 +14,76 @@
  */
 package geb.junit4
 
-import geb.report.*
+import geb.Browser
+import geb.report.ReporterSupport
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TestName
 
 class GebReportingTest extends GebTest {
 
-	static private GEB_REPORTING_TEST_COUNTERS = [:]
-	static private GEB_REPORTING_TEST_REPORTERS = [:]
+    static private testCounters = [:]
+    static private testCleanFlags = [:]
+    private instanceTestCounter = 1
 
-	@Rule public TestName _gebReportingTestTestName = new TestName()
-	
-	void report(String label) {
-		getTestReporter(this)?.writeReport("${getNextTestCounterValue(this)}-${_gebReportingTestTestName.methodName}-$label", getBrowser())
-	}
-	
-	@After
- 	void writeGebReport() {
-		report("end")
-	}
+    @Rule
+    public ReportingFailureWatcher failureWatcher = new ReportingFailureWatcher(this)
 
-	/**
-	 * Subclasses can override this to use a different reporter
-	 */
-	Reporter createReporter() {
-		def reportDir = getReportDir()
-		reportDir ? new ScreenshotAndPageSourceReporter(reportDir, this.class, true) : null
-	}
-	
-	/**
-	 * Subclasses override this to determine where the reports are written
-	 */
-	File getReportDir() {
-		browser.config.reportsDir
-	}
-	
-	static private getTestReporter(test) {
-		def key = test.class.name
-		if (!GEB_REPORTING_TEST_REPORTERS.containsKey(key)) {
-			GEB_REPORTING_TEST_REPORTERS[key] = test.createReporter()
-		}
-		GEB_REPORTING_TEST_REPORTERS[key]
-	}
-	
-	static private getNextTestCounterValue(test) {
-		def key = test.class.name
-		def value = GEB_REPORTING_TEST_COUNTERS[key] ?: 0
-		GEB_REPORTING_TEST_COUNTERS[key] = ++value
-		value
-	}
+    @Rule
+    public TestName gebReportingTestTestName = new TestName()
+
+    void report(String label) {
+        browser.report(effectiveReportLabel(label))
+    }
+
+    String effectiveReportLabel(String label) {
+        ReporterSupport.toTestReportLabel(getTestCounterValue(), instanceTestCounter++, gebReportingTestTestName.methodName, label)
+    }
+
+    @Before
+    void setupReporting() {
+        reportGroup getClass()
+        incrementTestCounterValue()
+
+        // We need to clean the inner reports dir just once for this class so we have to
+        // use this static tracking data to see if we are about to run the first test.
+        def key = getKeyNameForTracking()
+        if (!testCleanFlags.containsKey(key)) {
+            testCleanFlags[key] = true
+            cleanReportGroupDir()
+        }
+    }
+
+    @Override
+    Browser getBrowser() {
+        def browser = super.getBrowser()
+        failureWatcher.browser = browser
+        browser
+    }
+
+    @After
+    void writeGebReport() {
+        if (this.@browser && !browser.config.reportOnTestFailureOnly) {
+            report "end"
+        }
+    }
+
+    private incrementTestCounterValue() {
+        def key = getKeyNameForTracking()
+        if (testCounters.containsKey(key)) {
+            testCounters[key] = ++testCounters[key]
+        } else {
+            testCounters[key] = 1
+        }
+    }
+
+    private getTestCounterValue() {
+        testCounters[getKeyNameForTracking()] ?: 1
+    }
+
+    private getKeyNameForTracking() {
+        getClass().name
+    }
 
 }

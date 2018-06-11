@@ -1,0 +1,928 @@
+[[pages]]
+= Pages
+
+[NOTE]
+====
+Before reading this chapter, please make sure you have read the <<drive, section on the `Browser.drive()` method>>
+====
+
+== The Page Object pattern
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageObjectPatternSpec.groovy[tag=using_navigators,indent=0]
+----
+
+This is valid Geb code, and it works well for a one off script but there are two big issues with this approach.
+Imagine that you have _many_ tests that involve searching and checking results.
+The implementation of how to search and how to find the results is going to have to be duplicated in _every_ test, maybe _many times_ per test.
+As soon as something as trivial as the name of the search field changes you have to update a lot of code.
+The Page Object Pattern allows us to apply the same principles of modularity, reuse and encapsulation that we use in other aspects of programming to avoid such issues in browser automation code.
+
+Here is the same script, utilising page objects…
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageObjectPatternSpec.groovy[tag=import,indent=0]
+include::{test-dir}/pages/PageObjectPatternSpec.groovy[tag=pages,indent=0]
+
+include::{test-dir}/pages/PageObjectPatternSpec.groovy[tag=using_pages,indent=0]
+----
+
+You have now encapsulated, in a reusable fashion, information about each page and how to interact with it.
+As anyone who has tried to knows, maintaining a large suite of functional web tests for a changing application can become an expensive and frustrating process.
+Geb's support for the Page Object pattern addresses this problem.
+
+== The `Page` superclass
+
+All page objects *must* inherit from `{page-api}`.
+
+[[content-dsl]]
+== The content DSL
+
+Geb features a DSL for defining page content in a _templated_ fashion, which allows very concise yet flexible page definitions.
+Pages define a `static` closure property called `content` that describes the page content.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=html,indent=0]
+----
+
+We could define this content as so…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_div,indent=0]
+----
+
+The structure to the content DSL is…
+
+[source]
+----
+«name» { «definition» }
+----
+
+Where `«definition»` is Groovy code that is evaluated against the instance of the page.
+
+Here is how it could be used…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_div_usage,indent=0]
+----
+
+So how is this working?
+First, remember that the `Browser` instance delegates any method calls or property accesses that it doesn't know about to the current page instance.
+So the above code is the same as…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=verbose_page_with_div_usage,indent=0]
+----
+
+Secondly, defined content becomes available as properties and methods on instance of the page…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=accessing_content_using_a_method,indent=0]
+----
+
+The Content DSL actually defines content _templates_.
+This is best illustrated by example…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=templated_page_with_div,indent=0]
+
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=templated_page_with_div_usage,indent=0]
+----
+
+There are no restrictions on what arguments can be passed to content templates.
+
+A content template can return _anything_.
+Typically they will return a `{navigator-api}` object through the use of the `$()` function, but it can be anything.
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_string_content,indent=0]
+
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_string_content_usage,indent=0]
+----
+
+It's important to realise that `«definition»` code is evaluated against the page instance.
+This allows code like the following…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_content_reuse,indent=0]
+----
+
+And this is not restricted to other content…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_content_using_a_field,indent=0]
+----
+
+Or…
+
+[source,groovy]
+----
+include::{test-dir}/pages/ContentDslSpec.groovy[tag=page_with_content_using_a_method,indent=0]
+----
+
+=== Template options
+
+Template definitions can take different options. The syntax is…
+
+[source]
+----
+«name»(«options map») { «definition» }
+----
+
+For example…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=introduction,indent=0]
+----
+
+The following are the available options.
+
+==== `required`
+
+Default value: `true`
+
+The `required` option controls whether or not the content returned by the definition has to exist or not.
+This is only relevant when the definition returns a `Navigator` object (via the `$()` function) or `null`, it is ignored if the definition returns anything else.
+
+If the `required` option is set to `true` and the returned content does not exist, a `{required-page-content-not-present-api}` exception will be thrown.
+
+Given a completely empty html document the following will pass…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=required_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=required,indent=0]
+----
+
+[[content-dsl-min]]
+==== `min`
+
+Default value: `1`
+
+The `min` option allows to specify the minimum number of elements that the `Navigator` object returned by the definition should contain.
+If the number of elements returned is lower than the specified value then `{content-page-count-out-of-bounds-exception-api}` will be thrown.
+
+The value should be a non-negative integer.
+This option cannot be used together with the <<content-dsl-times,`times` option>>.
+
+Given the following HTML…
+
+[source,html]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=min_html,indent=0]
+----
+
+Accessing the following content definition…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=min_option,indent=0]
+----
+
+Will result in a `ContentCountOutOfBoundsException` and the following exception message:
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=min_exception_message,indent=0]
+----
+
+[[content-dsl-max]]
+==== `max`
+
+Default value: `Integer.MAX_INT`
+
+The `max` option allows to specify the maximum number of elements that the `Navigator` object returned by the definition should contain.
+If the number of elements returned is higher than the specified value then `{content-page-count-out-of-bounds-exception-api}` will be thrown.
+
+The value should be a non-negative integer.
+This option cannot be used together with the <<content-dsl-times,`times` option>>.
+
+Given the following HTML…
+
+[source,html]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=max_html,indent=0]
+----
+
+Accessing the following content definition…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=max_option,indent=0]
+----
+
+Will result in a `ContentCountOutOfBoundsException` and the following exception message:
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=max_exception_message,indent=0]
+----
+
+[[content-dsl-times]]
+==== `times`
+
+Default value: `null`
+
+A helper option allowing to specify both <<content-dsl-min,`min` option>> and <<content-dsl-max,`max` option>> in a single option.
+If the number of elements returned is out of bounds specified then `{content-page-count-out-of-bounds-exception-api}` will be thrown.
+
+The value should be a non-negative integer (when the minimum and maximum number of elements are desired to be equal) or an integer range.
+This option cannot be used together with `min` and `max` options.
+
+Given the following HTML…
+
+[source,html]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=times_html,indent=0]
+----
+
+Accessing the following content definition…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=times_option,indent=0]
+----
+
+Will result in a `ContentCountOutOfBoundsException` and the following exception message:
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=times_exception_message,indent=0]
+----
+
+==== `cache`
+
+Default value: `false`
+
+The `cache` option controls whether or not the definition is evaluated each time the content is requested (the content is cached for each unique set of parameters). 
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=cache_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=cache,indent=0]
+----
+
+Caching is a performance optimisation and is disabled by default.
+You may want to enable if you notice that the a particular content definition is taking a long time to resolve.
+
+[[content-dsl-to]]
+==== `to`
+
+Default value: `null`
+
+The `to` option allows the definition of which page the browser will be sent to if the content is clicked.
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=to_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=to,indent=0]
+----
+
+The `to` value will be implicitly used as an argument to the content's `click()` method, effectively setting the new page type and verifying its at checker.
+See the section on <<clicking, clicking content>> for how this changes the browser's page object.
+
+This option also supports all types that can be passed to any of the <<changing-pages, `Browser.page()` method variants>>:
+
+* a page instance
+* a list of page classes
+* a list of page instances
+
+When using lists variants (here shown with page classes)…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=to_list_page,indent=0]
+----
+
+Then, on click, the browser's page is set to the first page in the list whose at checker passes.
+This is equivalent to the link:api/geb/Browser.html#page(Class%3C%3F%20extends%20Page%3E)[`page(Class&lt;? extends Page&gt;[\])`] and
+link:api/geb/Browser.html#page(T)[`page(Page[\])`] browser methods which are explained in the section on <<changing-pages, changing pages>>.
+
+All of the page classes and classes of the page instances passed in when using any variant of the `to` option have to have an “at” checker defined otherwise an `UndefinedAtCheckerException` will be
+thrown.
+
+[[content-dsl-wait]]
+==== `wait`
+
+Default value: `false`
+
+Allowed values:
+
+* *`true`* - wait for the content using the <<default-waiting-configuration, _default wait_>> configuration
+* *a string* - wait for the content using the <<waiting-presets, _wait preset_>> with this name from the configuration
+* *a number* - wait for the content for this many seconds, using the <<default-waiting-configuration, _default retry interval_>> from the configuration
+* *a 2 element list of numbers* - wait for the content using element 0 as the timeout seconds value, and element 1 as the retry interval seconds value
+
+Any other value will be interpreted as `false`.
+
+The `wait` option allows Geb to wait an amount of time for content to appear on the page, instead of throwing a `{required-page-content-not-present-api}` exception if the content is not present when
+requested.
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=waiting_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=waiting_content,indent=0]
+----
+
+This is equivalent to:
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=not_waiting_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=wrapped_waiting_content,indent=0]
+----
+
+See the <<waiting, section on waiting>> for the semantics of the `waitFor()` method, that is used here internally.
+Like `waitFor()` a `{wait-timeout-exception-api}` will be thrown if the wait timeout expires.
+
+It is also possible to use `wait` when defining non-element content, such as a string or number.
+Geb will wait until the content definition returns a value that conforms to the Groovy Truth.
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=non_navigator_waiting_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=non_navigator_waiting,indent=0]
+----
+
+In this case, we are inherently waiting for the `status` content to be on the page and for it to contain the string “Success”.
+If the `status` element is not present when we request `success`, the `{required-page-content-not-present-api}` exception that would be thrown is swallowed and Geb will try again after the
+retry interval has expired.
+
+You can modify the behaviour of content with `wait` option set to true if you use it together with `required` option set to false. Given a content definition:
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=not_required_waiting_page,indent=0]
+----
+
+Then if wait timeout expires when retrieving `dynamicallyAdded`, there will be no `WaitTimeoutException` thrown, and the last closure evaluation value will be returned.
+If there is an exception thrown during closure evaluation, it will be wrapped in an link:api/geb/waiting/UnknownWaitForEvaluationResult.html[`UnknownWaitForEvaluationResult`] instance and returned.
+
+Waiting content blocks are subject to “implicit assertions”.
+See the section on <<implicit-assertions, implicit assertions>> for more information.
+
+[[content-dsl-wait-condition]]
+==== `waitCondition`
+
+Default value: `null`
+
+The `waitCondition` option allows to specify a closure with a condition which must be fulfilled for the value returned from a template to be considered available when waiting for content.
+
+The closure passed in as `waitCondition` option will be called in a `waitFor()` loop with the value returned from content definition passed to it as the only argument.
+If <<implicit-assertions, implicit assertions>> are enabled which is the default then each statement in the closure is implicitly asserted.
+The closure should return a {groovy-truth-link}[truthy] value if the condition is to be met.
+
+Consider the following example:
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=wait_condition_page,indent=0]
+----
+
+Accessing content named…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=wait_condition_page_content_access,indent=0]
+----
+
+…will essentially cause Geb to wait until the content is not only in the DOM but also displayed.
+If the condition is not fulfilled before waiting timeout elapses then `WaitTimeoutException` will be thrown.
+
+The amount of waiting used when `waitCondition` option is provided can be controlled using the `wait` option but if it's not specified then it defaults to `true` which means that <<default-waiting-configuration, default waiting is applied>>.
+
+[[content-dsl-to-wait]]
+==== `toWait`
+
+Default value: `false`
+
+Allowed values are the same as for the <<content-dsl-wait,`wait`>> option.
+
+Can be used together with the <<content-dsl-to, `to`>> option to specify that the page changing action performed when the content is clicked is asynchronous.
+This essentially means that verification of page transition (“at checking”) should be wrapped in a `waitFor()` call.
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/pages/ToWaitOptionSpec.groovy[tag=to_wait_page,indent=0]
+----
+<1> Page change is asynchronous, e.g. an ajax call is involved.
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/pages/ToWaitOptionSpec.groovy[tag=to_wait,indent=0]
+----
+
+See the <<waiting, section on waiting>> for the semantics of the `waitFor()` method, that is used here internally.
+Like `waitFor()` a `{wait-timeout-exception-api}` will be thrown if the wait timeout expires.
+
+[[content-dsl-page]]
+==== `page`
+
+Default value: `null`
+
+The `page` option allows the definition of a page the browser will be set to if the content describes a frame and is used in a `withFrame()` call.
+
+Given the following HTML…
+
+[source,html]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=page_html,indent=0]
+----
+
+…and the contents of frame.html…
+
+[source,html]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=frame_html,indent=0]
+----
+
+…the following will pass…
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=page_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/TemplateOptionsSpec.groovy[tag=page,indent=0]
+----
+
+=== Aliasing
+
+If you wish to have the same content definitions available under different names you can create a content definition that specifies `aliases` parameter:
+
+[source,groovy]
+----
+include::{test-dir}/pages/AliasingSpec.groovy[tag=page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/AliasingSpec.groovy[tag=usage,indent=0]
+----
+
+Remember that the aliased content has to be defined before the aliasing content, otherwise you will get a `{invalid-page-content-api}` exception.
+
+[[at-checker]]
+== “At” verification
+
+Each page can define a way to check whether the underlying browser is at the page that the page class actually represents.
+This is done via a `static` `at` closure…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AtSpec.groovy[tag=introduction,indent=0]
+----
+
+This closure can either return a `false` value or throw an `AssertionError` (via the `assert` method).
+The `verifyAt()` method call will either:
+
+* return `true` if the “at” checker passes
+* if <<implicit-assertions, implicit assertions>> are <<implicit-assertions-mechanics, enabled>> and the “at” checker fails it will throw an `AssertionError`
+* return `false` if implicit assertions are not enabled and the “at” checker fails
+
+Considering the example above you could use it like this…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AtSpec.groovy[tag=leading_to_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/AtSpec.groovy[tag=verify_at,indent=0]
+----
+
+The `verifyAt()` method is used by the `Browser.at()` method that takes a page class or instance.
+It behaves the same as `verifyAt()` if the “at” checker fails and returns a page instance if the checker succeeds (which is useful if you wish to write <<strong-typing, strongly typed>> code with Geb)…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AtSpec.groovy[tag=at,indent=0]
+----
+
+[TIP]
+====
+There is no need to perform “at” verification after navigating to a page using <<using-pages, `to()` method>> or clicking on content with <<content-dsl-to, `to` option>> specified as it is performed
+implicitly in these cases.
+====
+
+At checkers are subject to “implicit assertions”. See the section on <<implicit-assertions, implicit assertions>> for more information.
+
+If you don't wish to get an exception when “at” checking fails there are methods that return `false` in that case: link:api/geb/Page.html#verifyAtSafely(boolean)[`Page#verifyAtSafely()`] and
+link:api/geb/Browser.html#isAt(Class%3C%3F%20extends%20Page%3E,%20boolean)[`Browser#isAt(Class&lt;? extends Page&gt;)`].
+
+As mentioned previously, when a content template defines a <<content-dsl-to, `to` option>> of more than one page the page's `verifyAt()` method is used to determine which one of the pages to use.
+In this situation, any `AssertionError` thrown by “at” checkers are suppressed.
+
+The “at” checker is evaluated against the page instance, and can access defined content or any other variables or methods…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AtSpec.groovy[tag=at_checker_using_content_definition,indent=0]
+----
+
+If a page does not have an “at” checker, the `verifyAt()` and `at()` methods will throw an `UndefinedAtCheckerException`.
+The same will happen if any of the pages in the list used as `to` content template option doesn't define an “at” checker.
+
+It can sometimes prove useful to wrap “at” verification in `waitFor()` calls by default - some drivers are known to return control after URL change before the page is fully loaded in some
+circumstances or before one might consider it to be loaded. This behaviour can be required using <<at-check-waiting, `atCheckWaiting` configuration entry>>.
+
+:numbered!:
+
+[[unexpected-pages]]
+=== Unexpected pages
+
+A list of unexpected pages can be provided via <<unexpected-pages-config, `unexpectedPages` configuration entry>>.
+
+[IMPORTANT]
+====
+Note that this feature does not operate on HTTP response codes as these are not exposed by WebDriver thus Geb does not have access to them.
+To use this feature your application has to render custom error pages that can be modeled as page classes and detected by an “at” checker.
+====
+
+If configured, the classes from the list specified as `unexpectedPages` configuration entry will be checked for first when “at” checking is performed for any page, and an `UnexpectedPageException`
+with an appropriate message will be raised if any of them is encountered.
+
+Given that your application renders a custom error page when a page is not found with a text like "Sorry but we could not find that page", you can model that page with the following class:
+
+[source,groovy]
+----
+include::{test-dir}/pages/UnexpectedPagesSpec.groovy[tag=unexpected_page,indent=0]
+----
+
+Then register that page in configuration:
+
+[source,groovy]
+----
+include::{test-dir}/pages/UnexpectedPagesSpec.groovy[tag=config,indent=0]
+----
+
+When checking if the browser is at a page while the “at” checker for `PageNotFoundPage` is fulfilled, an `UnexpectedPageException` will be raised.
+
+[source,groovy]
+----
+include::{test-dir}/pages/UnexpectedPagesSpec.groovy[tag=usage,indent=0]
+----
+
+Unexpected pages will be checked for whenever “at” checking is performed, even implicitly like when using `to` content template option or passing one or many page classes to `Navigator.click()`
+method.
+
+It is possible to explicitly check if the browser is at an unexpected page.
+Following will pass without throwing an `UnexpectedPageException` if “at” checking for `PageNotFoundPage` succeeds:
+
+[source,groovy]
+----
+include::{test-dir}/pages/UnexpectedPagesSpec.groovy[tag=checking_for_unexpected_page,indent=0]
+----
+
+[WARNING]
+====
+The <<at-check-waiting,global `atCheckWaiting` configuration>> does not apply when checking for unexpected pages.
+That is, even if configuration calls for implicitly wrapping “at checks” in a `waitFor()` call it is not done when verifying “at checkers” of unexpected pages.
+This is due to the fact that “at checkers” for unexpected pages are not fulfilled for most of the time and they are checked for every `at()` and `to()` call thus wrapping them in an implicit
+`waitFor()` call would make these methods extremely slow.
+The <<page-level-at-check-waiting, page level `atCheckWaiting` configuration>> on the other hand applies to unexpected pages so you can use it if you actually need to wait around “at checkers”
+of such pages.
+====
+
+:numbered:
+
+== Page URLs
+
+Pages can define URLs via the `static` `url` property.
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageUrlSpec.groovy[tag=page,indent=0]
+----
+
+The url is used when using the browser `to()` method.
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageUrlSpec.groovy[tag=to,indent=0]
+----
+
+See the section on <<base-url, the base url>> for notes about URLs and slashes.
+
+=== URL fragments
+
+Pages can also define URL fragment identifiers (the part after a `#` character at the end of an url) via the `static` `fragment` property.
+
+The value assigned can be either a `String` which will be used as is or a `Map` which will be translated into an `application/x-www-form-urlencoded` `String`.
+The latter is particularly useful when dealing with single page applications that store state in the fragment identifier by form encoding it.
+
+[TIP]
+====
+There is no need to escape any of the strings used for url fragments as all the necessary escaping is performed by Geb.
+====
+
+Consider the following page which defines an url fragment in such single page application scenario:
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageUrlFragmentSpec.groovy[tag=page,indent=0]
+----
+
+The fragment is then used when using the browser `to()` method.
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageUrlFragmentSpec.groovy[tag=to,indent=0]
+----
+
+You can also use fragments which are dynamic - you can learn how in <<advanced-page-navigation-url-fragments,_URL fragments_ subsection of _Advanced page navigation_ chapter>>.
+
+[[page-level-at-check-waiting]]
+=== Page level `atCheckWaiting` configuration
+
+At checkers for a specific page can be configured to be implicitly wrapped with `waitFor()` calls.
+This can be set with the `static` `atCheckWaiting` property.
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageAtCheckWaitingSpec.groovy[tag=page,indent=0]
+----
+
+The possible values for the `atCheckWaiting` option are the same as for <<content-dsl-wait, the `wait` content template option>>.
+
+The `atCheckWaiting` value configured at page level takes priority over the global value specified in <<at-check-waiting, the configuration>>.
+
+[[advanced-page-navigation]]
+== Advanced page navigation
+
+Page classes can customise how they generate URLs when used in conjunction with the browser `to()` method. 
+
+Consider the following example…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=pages_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=to,indent=0]
+----
+
+The `to()` method can also take arguments…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=manuals_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=to_with_args,indent=0]
+----
+
+Any arguments passed to the `to()` method after the page class are converted to a URL path by calling `toString()` on each argument and joining them with “`/`”.
+
+However, this is extensible.
+You can specify how a set of arguments is converted to a URL path to be added to the page URL.
+This is done by overriding the `{convert-to-path-api}` method.
+The `{page-api}` implementation of this method looks like this…
+
+[source,groovy]
+----
+include::{core-source-dir}/geb/Page.groovy[tag=convert_to_path,indent=0]
+----
+
+You can either overwrite this catchall method to control path conversion for all invocations or provide an overloaded version for a specific type signature.
+Consider the following…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=manual_class,indent=0]
+
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=manuals_page_with_convert_to_path,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=convert_to_path,indent=0]
+----
+
+=== Named params
+
+Any type of argument can be used with the `to()` method, *except* named parameters (i.e. a `Map`).
+Named parameters are *always* interpreted as query parameters and they are never sent
+Using the classes from the above example…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=to_with_named_params,indent=0]
+----
+
+[[advanced-page-navigation-url-fragments]]
+=== URL fragments
+
+An instance of `{url-fragment-api}` can be passed as an argument which follows a page class or instance when calling `to()` in order to dynamically control the fragment identifier part of the url.
+The `UrlFragment` class comes with two static factory methods: {string-url-fragment-factory-link}[one for creating a fragment from an explicit `String`] and {map-url-fragment-factory-link}[one for creating a fragment from a `Map` which is then form encoded].
+
+The following shows a usage example utilising the classes from the examples above…
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=to_with_fragment,indent=0]
+----
+
+If you are using <<parameterized-pages,parameterized pages>> and you wish the fragment to be determined dynamically, e.g. based on page properties then you can override the `{get-page-fragment-api}` method:
+
+[source,groovy]
+----
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=parameterized_manuals_page,indent=0]
+
+include::{test-dir}/pages/AdvancedNavigationSpec.groovy[tag=to_with_parameterized_page,indent=0]
+----
+
+[[parameterized-pages]]
+== Parametrized pages
+
+`Browser` methods like `{to-api}`, `{via-api}`, `{at-api}` and `{page-method-api}` accept not only page classes but page instances as well.
+This is useful for example when parameterizing pages to use property values in “at” checkers:
+
+[source,groovy]
+----
+include::{test-dir}/pages/ParameterizedPageSpec.groovy[tag=pages,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/ParameterizedPageSpec.groovy[tag=example,indent=0]
+----
+
+[IMPORTANT]
+====
+Manually instantiated pages have to be initialized before they can be used.
+Initialization is performed as part of the `Browser` methods mentioned above.
+Failing to pass the page instance to one of these methods and calling any method on an uninitialized page instance might result in a `PageInstanceNotInitializedException`.
+====
+
+[[pages-inheritance]]
+== Inheritance
+
+Pages can be arranged in an inheritance hierarchy. The content definitions are merged…
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageInheritanceSpec.groovy[tag=pages,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/PageInheritanceSpec.groovy[tag=example,indent=0]
+----
+
+If a subclass defines a content template with the same name as a content template defined in a superclass, the subclass version replaces the version from the superclass.
+
+== Lifecycle hooks
+
+Page classes can optionally implement methods that are called when the page is set as the browser's current page and when it is swapped out for another page. This can be used to transfer state between pages.
+
+=== `onLoad(Page previousPage)`
+
+The `onLoad()` method is called with previous page object instance when the page becomes the new page object for a browser.
+
+[source,groovy]
+----
+include::{test-dir}/pages/LifecycleHooksSpec.groovy[tag=on_load_pages,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/LifecycleHooksSpec.groovy[tag=on_load,indent=0]
+----
+
+=== `onUnload(Page newPage)`
+
+The `onUnload()` method is called with next page object instance when the page is being replaced as the page object for the browser.
+
+[source,groovy]
+----
+include::{test-dir}/pages/LifecycleHooksSpec.groovy[tag=on_unload_pages,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/LifecycleHooksSpec.groovy[tag=on_unload,indent=0]
+----
+
+== Dealing with frames
+
+Frames might seem a thing of the past, but if you're accessing or testing some legacy application with Geb, you might still need to deal with them.
+Thankfully, Geb makes working with them groovier thanks to the `withFrame()` method which is available on `Browser`, `Page` and `Module` instances.
+
+=== Executing code in the context of a frame
+
+There are multiple flavours of the `withFrame()` method, but for all of them the last closure parameter is executed in the context of a frame specified by the first parameter.
+The value returned by the closure parameter is returned from the method and after the execution the page is restored to what it was before the call.
+The various `withFrame()` methods are as follows:
+
+* `withFrame(String, Closure)` - `String` parameter contains the name or id of a frame element
+* `withFrame(int, Closure)` - `int` parameter contains the index of the frame element, that is, if a page has three frames, the first frame would be at index `0`, the second at index `1` and the third
+at index `2`
+* `withFrame(Navigator, Closure)` - `Navigator` parameter should contain a frame element
+* `withFrame(SimplePageContent, Closure)` - `SimplePageContent`, which is a type returned by content templates, should contain a frame element
+
+Given the following HTML…
+
+[source,html]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=html,indent=0]
+----
+
+…the code for frame.html…
+
+[source,html]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=frame,indent=0]
+----
+
+…and a page class…
+
+[source,groovy]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=page,indent=0]
+----
+
+…then this code will pass…
+
+[source,groovy]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=example,indent=0]
+----
+
+If a frame cannot be found for a given first argument of the `withFrame()` call, then `{no-such-frame-exception-api}` is thrown.
+
+=== Switching pages and frames at once
+
+All of the aforementioned `withFrame()` variants also accept an optional second argument (a page class or a page instance) which allows to switch page for the execution of the closure passed as
+the last parameter. If the page used specifies an “at” checker it will be verified after switching the context to the frame.
+
+Given the html and page class from the previous example the following is an example usage with a page class:
+
+[source,groovy]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=frame_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=switching_class,indent=0]
+----
+
+And this is how an example usage with a page instance looks like:
+
+[source,groovy]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=parameterized_frame_page,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/pages/FramesSpec.groovy[tag=switching_instance,indent=0]
+----
+
+It is also possible to <<content-dsl-page, specify a page to switch to for a page content that describes a frame>>.

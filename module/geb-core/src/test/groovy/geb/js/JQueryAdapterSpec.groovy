@@ -14,81 +14,83 @@
  */
 package geb.js
 
-import geb.test.util.*
-import spock.lang.*
+import geb.test.*
 
-class JQueryAdapterSpec extends GebSpecWithServer {
-	
-	def setupSpec() {
-		def jquery = getClass().getResource("/jquery-1.4.2.min.js")
-		
-		server.get = { req, res ->
-			res.outputStream << """
-				<html>
-				<head>
-					<script type="text/javascript">
-						${jquery.openStream().text}
-					</script>
-					<script type="text/javascript">
-						var i = false;
-						\$(function() {
-							\$("#a").click(function() { 
-								i = true;
-							})
-						});
-					</script>
-				</head>
-				<body>
-					<div id="a"></div>
-					<div id="b" class="x"></div>
-				</body>
-				</html>
-			"""
-		}
-	}
-		
-	def setup() {
-		go()
-	}
-	
-	def "simple method"() {
-		expect:
-		js.i == false
-		when:
-		$("div#a").jquery.click()
-		then:
-		js.i == true
-	}
+class JQueryAdapterSpec extends GebSpecWithCallbackServer {
 
+    def setupSpec() {
+        def jquery = getClass().getResource("/jquery-1.4.2.min.js")
 
-	def "method with arg"() {
-		expect:
-		js.i == false
-		when:
-		$("div#a").jquery.trigger('click')
-		then:
-		js.i == true
-	}
-	
-	def "String return value"() {
-		expect:
-		$("#a").jquery.attr("id") == "a"
-	}
-	
-	def "Navigator return value"() {
-		expect:
-		$("#a").jquery.next().@id == "b"
-	}
-	
-	def "boolean return value"() {
-		expect:
-		$("#a").jquery.hasClass("x") == false
-		$("#b").jquery.hasClass("x") == true
-	}
-	
-	def "int return value"() {
-		expect:
-		$("div").jquery.size() == 2
-	}
-	
+        callbackServer.get = { req, res ->
+            res.outputStream << """
+                <html>
+                <head>
+                    <script type="text/javascript">
+                        ${jquery.openStream().text}
+                    </script>
+                    <script type="text/javascript">
+                        var i = false;
+                        \$(function() {
+                            \$("#a").click(function() {
+                                i = true;
+                            })
+                        });
+                    </script>
+                </head>
+                <body>
+                    <div id="a"></div>
+                    <div id="b" class="x"></div>
+                </body>
+                </html>
+            """
+        }
+    }
+
+    def setup() {
+        go()
+    }
+
+    def "simple method"() {
+        expect:
+        js.i == false
+        when:
+        $("div#a").jquery.click()
+        then:
+        js.i == true
+    }
+
+    def "method with arg"() {
+        expect:
+        js.i == false
+        when:
+        $("div#a").jquery.trigger('click')
+        then:
+        js.i == true
+    }
+
+    def "String return value"() {
+        expect:
+        $("#a").jquery.attr("id") == "a"
+    }
+
+    def "Navigator return value"() {
+        expect:
+        $("#a").jquery.next().@id == "b"
+    }
+
+    def "boolean return value"() {
+        expect:
+        $("#a").jquery.hasClass("x") == false
+        $("#b").jquery.hasClass("x") == true
+    }
+
+    def "int return value"() {
+        expect:
+        $("div").jquery.size() == 2
+    }
+
+    def "non jquery object return value"() {
+        expect:
+        $("#a").jquery.offset().top instanceof Number
+    }
 }

@@ -1,155 +1,297 @@
+/*
+ * Copyright 2010 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package geb.navigator
 
-import org.openqa.selenium.WebElement
-import static java.util.Collections.EMPTY_LIST
-import static java.util.Collections.EMPTY_SET
 import geb.Browser
 import geb.Page
+import geb.waiting.Wait
+import org.openqa.selenium.By
+import org.openqa.selenium.WebElement
+
+import static java.util.Collections.EMPTY_LIST
 
 /**
  * Implementation of an empty Navigator object - helps keep the other code simple.
  */
-class EmptyNavigator extends Navigator {
+class EmptyNavigator extends AbstractNavigator {
 
-	static {
-		def mc = new AttributeAccessingMetaClass(new ExpandoMetaClass(EmptyNavigator))
-		mc.initialize()
-		EmptyNavigator.metaClass = mc
-	}
-	
-	EmptyNavigator(Browser browser) {
-		super(browser)
-	}
+    EmptyNavigator(Browser browser) {
+        super(browser, new EmptyNavigatorBasicLocator(browser))
+    }
 
-	private static final String[] EMPTY_STRING_ARRAY = new String[0]
+    @Override
+    Navigator filter(String selector) { this }
 
-	Navigator find(String selector) { this }
+    @Override
+    Navigator filter(Map<String, Object> predicates) { this }
 
-	Navigator find(Map<String, Object> predicates) { this }
+    @Override
+    Navigator not(String selector) { this }
 
-	Navigator find(Map<String, Object> predicates, String selector) { this }
+    @Override
+    Navigator not(Map<String, Object> predicates, String selector) { this }
 
-	Navigator filter(String selector) { this }
+    @Override
+    Navigator not(Map<String, Object> predicates) { this }
 
-	Navigator filter(Map<String, Object> predicates) { this }
+    @Override
+    Navigator click() {
+        throw new UnsupportedOperationException("not supported on empty navigator objects")
+    }
 
-	Navigator filter(Map<String, Object> predicates, String selector) { this }
+    @Override
+    Navigator click(Class<? extends Page> pageClass, Wait wait = null) {
+        throw new UnsupportedOperationException("not supported on empty navigator objects")
+    }
 
-	Navigator not(String selector) { this }
+    @Override
+    Navigator click(Page pageInstance, Wait wait = null) {
+        throw new UnsupportedOperationException("not supported on empty navigator objects")
+    }
 
-	void click() { }
+    @Override
+    Navigator click(List potentialPages, Wait wait = null) {
+        throw new UnsupportedOperationException("not supported on empty navigator objects")
+    }
 
-	void click(Class<? extends Page> pageClass) {
-		throw new UnsupportedOperationException("not supported on empty navigator objects")
-	}
-	
-	void click(List<Class<? extends Page>> pageClasses) {
-		throw new UnsupportedOperationException("not supported on empty navigator objects")
-	}
+    @Override
+    Navigator head() { this }
 
-	Navigator head() { this }
+    @Override
+    Navigator first() { this }
 
-	Navigator first() { this }
+    @Override
+    Collection<WebElement> allElements() { EMPTY_LIST }
 
-	Collection<WebElement> allElements() { EMPTY_LIST }
+    @Override
+    WebElement getElement(int index) { null }
 
-	WebElement getElement(int index) { null }
+    @Override
+    List<WebElement> getElements(Range range) { EMPTY_LIST }
 
-	List<WebElement> getElements(Range range) { EMPTY_LIST }
+    @Override
+    List<WebElement> getElements(Collection indexes) { EMPTY_LIST }
 
-	List<WebElement> getElements(Collection indexes) { EMPTY_LIST }
+    @Override
+    boolean hasClass(String valueToContain) { false }
 
-	boolean hasClass(String valueToContain) { false }
+    @Override
+    boolean is(String tag) { false }
 
-	boolean is(String tag) { false }
+    @Override
+    boolean isEmpty() { true }
 
-	boolean isEmpty() { true }
+    @Override
+    Navigator last() { this }
 
-	Navigator last() { this }
+    @Override
+    Navigator tail() { this }
 
-	Navigator tail() { this }
+    @Override
+    Navigator next() { this }
 
-	Navigator next() { this }
+    @Override
+    Navigator next(Map<String, Object> attributes) { this }
 
-	Navigator next(String selector) { this }
+    @Override
+    Navigator next(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator nextAll() { this }
+    @Override
+    Navigator nextAll() { this }
 
-	Navigator nextAll(String selector) { this }
+    @Override
+    Navigator nextAll(Map<String, Object> attributes) { this }
 
-	Navigator nextUntil(String selector) { this }
+    @Override
+    Navigator nextAll(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator previous() { this }
+    @Override
+    Navigator nextUntil(Map<String, Object> attributes) { this }
 
-	Navigator previous(String selector) { this }
+    @Override
+    Navigator nextUntil(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator prevAll() { this }
+    @Override
+    Navigator previous() { this }
 
-	Navigator prevAll(String selector) { this }
+    @Override
+    Navigator previous(Map<String, Object> attributes) { this }
 
-	Navigator prevUntil(String selector) { this }
+    @Override
+    Navigator previous(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator parent() { this }
+    @Override
+    Navigator prevAll() { this }
 
-	Navigator parent(String selector) { this }
+    @Override
+    Navigator prevAll(Map<String, Object> attributes) { this }
 
-	Navigator parents() { this }
+    @Override
+    Navigator prevAll(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator parents(String selector) { this }
+    @Override
+    Navigator prevUntil(Map<String, Object> attributes) { this }
 
-	Navigator parentsUntil(String selector) { this }
+    @Override
+    Navigator prevUntil(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator closest(String selector) { this }
+    @Override
+    Navigator parent() { this }
 
-	Navigator children() { this }
+    @Override
+    Navigator parent(Map<String, Object> attributes) { this }
 
-	Navigator children(String selector) { this }
+    @Override
+    Navigator parent(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator siblings() { this }
+    @Override
+    Navigator parents() { this }
 
-	Navigator siblings(String selector) { this }
-	
-	Navigator remove(int index) { this }
+    @Override
+    Navigator parents(Map<String, Object> attributes) { this }
 
-	int size() { 0 }
+    @Override
+    Navigator parents(Map<String, Object> attributes = [:], String selector) { this }
 
-	boolean isDisplayed() { false }
-	
-	String tag() { null }
+    @Override
+    Navigator parentsUntil(Map<String, Object> attributes) { this }
 
-	String text() { null }
+    @Override
+    Navigator parentsUntil(Map<String, Object> attributes = [:], String selector) { this }
 
-	String getAttribute(String name) { null }
+    @Override
+    Navigator closest(Map<String, Object> attributes) { this }
 
-	Collection<String> classes() { EMPTY_SET }
+    @Override
+    Navigator closest(Map<String, Object> attributes = [:], String selector) { this }
 
-	def value() { null }
+    @Override
+    Navigator children() { this }
 
-	Navigator leftShift(value) { this }
+    @Override
+    Navigator children(Map<String, Object> attributes) { this }
 
-	Navigator getAt(int index) { this }
+    @Override
+    Navigator children(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator getAt(Range range) { this }
+    @Override
+    Navigator siblings() { this }
 
-	Navigator getAt(Collection indexes) { this }
+    @Override
+    Navigator siblings(Map<String, Object> attributes) { this }
 
-	Navigator verifyNotEmpty() { throw new EmptyNavigatorException() }
+    @Override
+    Navigator siblings(Map<String, Object> attributes = [:], String selector) { this }
 
-	Navigator value(value) { this }
+    @Override
+    Navigator remove(int index) { this }
 
-	String toString() { "[]" }
+    @Override
+    int size() { 0 }
 
-	def methodMissing(String name, arguments) {
-		if (!arguments) this
-		else throw new MissingMethodException(name, getClass(), arguments)
-	}
+    @Override
+    boolean isDisplayed() { false }
 
-	def propertyMissing(String name) {
-		if (name.startsWith("@")) {
-			null
-		} else {
-			throw new MissingPropertyException(name, getClass())
-		}
-	}
+    @Override
+    String tag() { null }
 
+    @Override
+    String text() { null }
+
+    @Override
+    String getAttribute(String name) { null }
+
+    @Override
+    List<String> classes() { EMPTY_LIST }
+
+    @Override
+    def value() { null }
+
+    @Override
+    Navigator leftShift(value) { this }
+
+    @Override
+    Navigator getAt(int index) { this }
+
+    @Override
+    Navigator getAt(Range range) { this }
+
+    @Override
+    Navigator getAt(Collection indexes) { this }
+
+    @Override
+    Navigator verifyNotEmpty() { throw new EmptyNavigatorException() }
+
+    @Override
+    Navigator value(value) { this }
+
+    @Override
+    Navigator unique() { this }
+
+    @Override
+    String toString() { "[]" }
+
+    @Override
+    boolean isFocused() {
+        false
+    }
+
+    def methodMissing(String name, arguments) {
+        if (arguments) {
+            throw new MissingMethodException(name, getClass(), arguments)
+        }
+        this
+    }
+
+    def propertyMissing(String name) {
+        if (name.startsWith("@")) {
+            null
+        } else {
+            throw new MissingPropertyException(name, getClass())
+        }
+    }
+
+    @Override
+    int hashCode() {
+        EmptyNavigator.hashCode()
+    }
+
+    @Override
+    boolean equals(Object obj) {
+        if (obj instanceof Navigator) {
+            allElements() == obj.allElements()
+        }
+    }
+
+    private static class EmptyNavigatorBasicLocator implements BasicLocator {
+
+        private final Browser browser
+
+        EmptyNavigatorBasicLocator(Browser browser) {
+            this.browser = browser
+        }
+
+        @Override
+        Navigator find(By bySelector) {
+            new EmptyNavigator(browser)
+        }
+
+        @Override
+        Navigator find(Map<String, Object> attributes, String selector) {
+            new EmptyNavigator(browser)
+        }
+    }
 }

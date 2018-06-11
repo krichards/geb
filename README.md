@@ -1,19 +1,15 @@
-Geb is a tool for automating web browsers for web testing, screen scraping and process automation.
+[![Build Status](https://circleci.com/gh/geb/geb/tree/master.svg?style=shield&circle-token=36ce4eb346f11ba916707d493b3f226bd5c9a5ec)](https://circleci.com/gh/geb/workflows/geb/tree/master)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.gebish/geb-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.gebish/geb-core)
 
-Project home: [http://geb.codehaus.org](http://geb.codehaus.org/)
+Geb (pronounced “jeb”) is a browser automation solution. It brings together the power of WebDriver, the elegance of jQuery content selection, the robustness of Page Object modelling and the expressiveness of the Groovy language.
 
-## Build Instructions
+For more information about the project, see the [http://www.gebish.org](http://www.gebish.org/).
 
-To build Geb, you will need Git installed. Once you have cloned Geb…
+## How to contribute
 
-    git clone git://github.com/geb/geb.git
+Please see [CONTRIBUTING.md](https://github.com/geb/geb/blob/master/CONTRIBUTING.md) for contribution guidelines. 
 
-You then need to get the submodules. To do this you need to run the following two commands:
+## Submitting issues
 
-    git submodule init
-    git submodule update
-
-You can now build Geb using the gradle wrapper…
-
-    ./gradlew jar
-
+If you'd like to submit an issue against Geb then please use [the issue tracker for geb/issues Github project](https://github.com/geb/issues/issues).
+Please avoid submitting usage questions as issues and use [the mailing lists](http://www.gebish.org/lists) instead.

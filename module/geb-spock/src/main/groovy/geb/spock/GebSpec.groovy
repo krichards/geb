@@ -14,61 +14,69 @@
  */
 package geb.spock
 
-import spock.lang.*
-import geb.*
-import org.openqa.selenium.WebDriver
+import geb.Browser
+import geb.Configuration
+import geb.ConfigurationLoader
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Stepwise
 
 class GebSpec extends Specification {
 
-	String gebConfEnv = null
-	String gebConfScript = null
-	
-	@Shared Browser _browser
+    String gebConfEnv = null
+    String gebConfScript = null
 
-	Configuration createConf() {
-		def conf = new ConfigurationLoader(gebConfEnv).getConf(gebConfScript)
-		conf
-	}
-	
-	Browser createBrowser() {
-		new Browser(createConf())
-	}
+    @SuppressWarnings("PropertyName")
+    @Shared
+    Browser _browser
 
-	Browser getBrowser() {
-		if (_browser == null) {
-			_browser = createBrowser()
-		}
-		_browser
-	}
+    Configuration createConf() {
+        new ConfigurationLoader(gebConfEnv, System.properties, new GroovyClassLoader(getClass().classLoader)).getConf(gebConfScript)
+    }
 
-	void resetBrowser() {
-		if (_browser?.config.autoClearCookies) {
-			_browser.clearCookiesQuietly()
-		}
-		_browser = null
-	}
+    Browser createBrowser() {
+        new Browser(createConf())
+    }
 
-	def methodMissing(String name, args) {
-		getBrowser()."$name"(*args)
-	}
+    Browser getBrowser() {
+        if (_browser == null) {
+            _browser = createBrowser()
+        }
+        _browser
+    }
 
-	def propertyMissing(String name) {
-		getBrowser()."$name"
-	}
-	
-	def propertyMissing(String name, value) {
-		getBrowser()."$name" = value
-	}
+    void resetBrowser() {
+        if (_browser?.config?.autoClearCookies) {
+            _browser.clearCookiesQuietly()
+        }
+        _browser = null
+    }
 
-	private isSpecStepwise() {
-		this.class.getAnnotation(Stepwise) != null
-	}
-	
-	def cleanup() {
-		if (!isSpecStepwise()) resetBrowser()
-	}
-	
-	def cleanupSpec() {
-		if (isSpecStepwise()) resetBrowser()
-	}
+    def methodMissing(String name, args) {
+        getBrowser()."$name"(*args)
+    }
+
+    def propertyMissing(String name) {
+        getBrowser()."$name"
+    }
+
+    def propertyMissing(String name, value) {
+        getBrowser()."$name" = value
+    }
+
+    private isSpecStepwise() {
+        this.class.getAnnotation(Stepwise) != null
+    }
+
+    def cleanup() {
+        if (!isSpecStepwise()) {
+            resetBrowser()
+        }
+    }
+
+    def cleanupSpec() {
+        if (isSpecStepwise()) {
+            resetBrowser()
+        }
+    }
 }

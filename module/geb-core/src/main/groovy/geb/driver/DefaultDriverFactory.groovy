@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *		http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,12 +14,9 @@
  */
 package geb.driver
 
-import org.openqa.selenium.WebDriver
-import geb.error.UnableToLoadAnyDriversException
-
 class DefaultDriverFactory extends NameBasedDriverFactory {
-	
-	DefaultDriverFactory(ClassLoader classLoader) {
-		super(classLoader, DriverRegistry.knownDriverClassNamesInPreferenceOrder.join(NameBasedDriverFactory.DRIVER_SEPARATOR))
-	}
+
+    DefaultDriverFactory(ClassLoader classLoader) {
+        super(classLoader, DriverRegistry.knownDriverClassNamesInPreferenceOrder.join(NameBasedDriverFactory.DRIVER_SEPARATOR))
+    }
 }

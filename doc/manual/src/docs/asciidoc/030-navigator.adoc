@@ -1,0 +1,974 @@
+[[navigator]]
+= Interacting with content
+
+Geb provides a concise and Groovy interface to the content and controls in your browser.
+This is implemented through the `Navigator` API which is a jQuery inspired mechanism for finding, filtering and interacting with DOM elements.
+
+== The `$()` function
+
+The `$()` function is the access point to the browser's page content.
+It returns a `{navigator-api}` object that is roughly analogous to a jQuery object.
+It is analogous in that it represents one or more elements on the page and can be used to refine the matched content or query the matched content.
+When a `$()` function is called that does not match any content, an “empty” navigator object is returned that represents no content.
+Operations on “empty” navigators return `null` or another “empty” navigator or other values that make sense (e.g. the `size()` method returns `0`).
+
+The signature of the `$()` function is as follows…
+
+[source,groovy]
+----
+$(«css selector», «index or range», «attribute / text matchers»)
+----
+
+The following is a concrete example…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=concrete_example,indent=0]
+----
+
+This would find the 3rd (elements are 0 indexed) `h1` element whose `class` _attribute_ is exactly “`heading`”.
+
+All arguments are optional, meaning the following calls are all valid:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=other_examples,indent=0]
+----
+
+[NOTE]
+====
+There is an alias for the dollar function named “find” if a method named “$” is not to your taste.
+====
+
+=== CSS Selectors
+
+You can use any CSS selector that the underlying `WebDriver` supports…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=css3_selectors,indent=0]
+----
+
+HTMLUnit driver only partially supports CSS 3.
+A future version of the HTMLUnit driver may gain better CSS 3 support.
+
+=== Using WebDriver's `By` class selectors
+
+For all signatures of `$()` function that accept a css selector there is an equivalent signature where an instance of WebDriver's `{by-api}` class can be used instead of a `String`.
+
+Using CSS selectors is the idiomatic way of using Geb and should be preferred to using `By` selectors.
+It is always possible to select the same elements using a css selector as when using a certain `By` selector apart from certain XPath selectors which is why this convenience mechanism is provided.
+
+Following are some examples of using `By` selectors…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=by_selectors,indent=0]
+----
+
+=== Indexes and ranges
+
+When matching, a single positive integer or integer range can be given to restrict by index.
+
+Consider the following html…
+
+[source,html]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=indexes_and_ranges_html,indent=0]
+----
+
+We can use indexes to match content like so…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=indexes_and_ranges,indent=0]
+----
+
+See below for an explanation of the `text()` method and the use of the spread operator.
+
+=== Attribute and text matching
+
+Matches can be made on attributes and node text values via Groovy's named parameter syntax.
+The value `text` is treated specially as a match against the node's text.
+All other values are matched against their corresponding attribute values.
+
+Consider the following html…
+
+[source,html]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=attributes_html,indent=0]
+----
+
+We can use attribute matchers like so…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=attributes,indent=0]
+----
+
+Attribute values are `and`ed together…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=multiple_attributes,indent=0]
+----
+
+We can use text matchers like so…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=text_matchers,indent=0]
+----
+
+You can mix attribute and text matchers…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=matchers_and_attributes,indent=0]
+----
+
+==== Using patterns
+
+To match the entire value of an attribute or the text you use a `String` value. It is also possible to use a `Pattern` to do regexp matching…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=pattern,indent=0]
+----
+
+Geb also ships with a bunch of shortcut pattern methods…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=pattern_methods,indent=0]
+----
+
+The following is the complete listing:
+
+|===
+|Case Sensitive |Case Insensitive |Description
+
+|`startsWith` |`iStartsWith` |Matches values that start with the given value
+|`contains` |`iContains` |Matches values that contain the given value anywhere
+|`endsWith` |`iEndsWith` |Matches values that end with the given value
+|`containsWord` |`iContainsWord` |Matches values that contain the given value surrounded by either whitespace or the beginning or end of the value
+|`notStartsWith` |`iNotStartsWith` |Matches values that DO NOT start with the given value
+|`notContains` |`iNotContains` |Matches values that DO NOT contain the given value anywhere
+|`notEndsWith` |`iNotEndsWith` |Matches values that DO NOT end with the given value
+|`notContainsWord` |`iNotContainsWord` |Matches values that DO NOT contain the given value surrounded by either whitespace or the beginning or end of the value
+|===
+
+All of these methods themselves can take a `String` or a `Pattern`…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/DollarExamplesSpec.groovy[tag=pattern_methods_using_pattern,indent=0]
+----
+
+[NOTE]
+====
+You might be wondering how this magic works, i.e. where these methods come from and where they can be used.
+They are methods that are available on `geb.Page` and other _places_ where you can use the $ function.
+They simply just return patterns.
+====
+
+=== Navigators are iterable
+
+The navigator objects implement the Java `Iterable` interface, which allows you to do lots of Groovy stuff like use the `max()` function…
+
+Consider the following html…
+
+[source,html]
+----
+include::{test-dir}/navigator/IterableSpec.groovy[tag=iterable_html,indent=0]
+----
+
+You can use the `max()` function on `Navigator` instances…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/IterableSpec.groovy[tag=max,indent=0]
+----
+
+This also means that navigator objects work with the Groovy spread operator…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/IterableSpec.groovy[tag=spread,indent=0]
+----
+
+When treating a navigator as `Iterable`, the iterated over content is always the exact matched elements (as opposed to including children).
+
+=== `equals()` and `hashCode()`
+
+It's possible to check `Navigator` instances for equality.
+The rules are simple - two empty navigators are always equal and two non empty navigators are only equal if they contain the exact same elements in the same order.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/EqualsSpec.groovy[tag=html,indent=0]
+----
+
+Here are some examples of equal Navigator instances…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/EqualsSpec.groovy[tag=equal,indent=0]
+----
+<1> Two empty navigators
+<2> Two single element navigators containing the same element
+<3> Two single element navigators containing the same element created using different methods
+<4> Two multi element navigators containing the same elements
+<5> Two multi element navigators containing the same elements created using different methods
+
+And some that are not equal…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/EqualsSpec.groovy[tag=not_equal,indent=0]
+----
+<1> Empty and not empty navigators
+<2> Single element navigators containing different elements
+<3> Multi element navigators containing the same elements but in a different order
+
+== Finding &amp; filtering
+
+Navigator objects have `find()` and `$()` methods for finding descendants, and `filter()` and `not()` methods for reducing the matched content.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=html,indent=0]
+----
+
+We can select `p.b` by…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=find,indent=0]
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=dollar,indent=0]
+----
+
+We can select `div.b` by…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=filter,indent=0]
+----
+
+or…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=not,indent=0]
+----
+
+We can select the `div` containing the `p` with…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=a_has,indent=0]
+----
+
+Or select the `div` containing the `input` with a type attribute of "text" like so…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=b_has,indent=0]
+----
+
+We can select the `div` that does not contain the `p` with…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=b_has_not,indent=0]
+----
+
+Or select the `div` that does not contain the `input` with a type attribute of "text" like so…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=a_has_not,indent=0]
+----
+
+Or select the two `div` that do not contain `input` with a type attribute of "submit" like so…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FindingAndFilteringSpec.groovy[tag=has_not,indent=0]
+----
+
+The `find()` and `$()` methods support the *exact same argument types as the `$()` function*.
+
+The `filter()`, `not()`, `has()` and `hasNot()` methods have the same signatures - they accept: a selector string, a predicates map or both.
+
+These methods return a new navigator object that represents the new content.
+
+== Composition
+
+It is also possible to compose navigator objects from other navigator objects, for situations where you can't express a content set in one query.
+To do this, simply call the `$()` function and pass in the navigators to compose.
+
+Consider the following markup…
+
+[source,html]
+----
+include::{test-dir}/navigator/CompositionSpec.groovy[tag=html,indent=0]
+----
+
+You can then create a new navigator object that represents both the `a` and `b` paragraphs the following way:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CompositionSpec.groovy[tag=dollar,indent=0]
+----
+
+An alternative way is to use the `add()` method of `Navigator` that takes either a `String` or a Webdriver's `By` selector:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CompositionSpec.groovy[tag=add,indent=0]
+----
+
+Finally, you can compose navigator objects from content. So given a page content definition:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CompositionSpec.groovy[tag=content_definition,indent=0]
+----
+
+You can compose content elements into a navigator in the following way:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CompositionSpec.groovy[tag=content,indent=0]
+----
+
+== Traversing
+
+Navigators also have methods for selecting content _around_ the matched content.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=siblings_html,indent=0]
+----
+
+You can select content _around_ `p.d` by…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=siblings,indent=0]
+----
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=next_html,indent=0]
+----
+
+The following code will select `p.b` &amp; `p.c`…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=next,indent=0]
+----
+
+The `previous()`, `prevAll()`, `next()`, `nextAll()`, `parent()`, `parents()`, `closest()`, `siblings()` and `children()` methods can also take CSS selectors and attribute matchers.
+
+Using the same html, the following examples will select `p.c`…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=next_with_args,indent=0]
+----
+
+Likewise, consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=parent_closest_html,indent=0]
+----
+
+The following examples will select `div.b`…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=parent,indent=0]
+----
+
+The `closest()` method is a special case in that it will select the first ancestor of the current elements that matches a selector.
+There is no no-argument version of the `closest()` method.
+For example, these will select `div.a`…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=closest,indent=0]
+----
+
+These methods do not take indexes as they automatically select the first matching content.
+To select multiple elements you can use `prevAll()`, `nextAll()` and `parents()` all of which have no-argument versions and versions that filter by a selector.
+
+The `nextUntil()`, `prevUntil()` and `parentsUntil()` methods return all nodes along the relevant axis _until_ the first one that matches a selector or attributes.
+Consider the following markup:
+
+[source,html]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=next_until_html,indent=0]
+----
+
+The following examples will select `div.b` and `div.c`:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TraversingSpec.groovy[tag=next_until,indent=0]
+----
+
+[[clicking]]
+== Clicking
+
+Navigator objects implement the `click()` method, which will instruct the browser to click the sole element the navigator has matched.
+If that method is called on a multi element `Navigator` then a `SingleElementNavigatorOnlyMethodException` is thrown.
+
+There are also `click(Class)` , `click(Page)` and `click(List)` methods that are analogous to the browser object's
+<<changing-pages,`page(Class&lt;? extends Page&gt;)`, `page(Page)`, and `page(Class&lt;? extends Page&gt;[])`, `page(Page[])` methods respectively>>.
+This allow page changes to be specified at the same time as click actions.
+
+For example…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/ClickingSpec.groovy[tag=click,indent=0]
+----
+
+Would click the `a.login` element, then effectively call `browser.page(LoginPage)` and verify that the browser is at the expected page.
+
+All of the page classes passed in when using the list variant have to have an “at” checker defined, otherwise an `UndefinedAtCheckerException` will be thrown.
+
+== Determining visibility
+
+`Navigator` objects have a `displayed` property that indicates whether the element is visible to the user or not.
+The `displayed` property of a navigator object that doesn't match anything is always `false`.
+
+== Focus
+
+It is possible to verify if a given `Navigator` object holds the currently focused element using its `focused` property.
+`Navigator` objects that don't match any elements will return `false` as the value of `focused` property and ones that match multiple elements will throw a `SingleElementNavigatorOnlyMethodException`.
+
+== Size and location
+
+You can obtain the size and location of content on the page.
+All units are in pixels.
+The size is available via the `height` and `width` properties, while the location is available as the `x` and `y` properties which represent the distance from the top left of the page
+(or parent frame) to the top left point of the content.
+
+All of these properties operate on the *sole* matched element only and a `SingleElementNavigatorOnlyMethodException` is thrown if they are accessed on a multi element `Navigator`.
+
+Consider the following html…
+
+[source,html]
+----
+include::{test-dir}/navigator/SizeAndLocationSpec.groovy[tag=html,indent=0]
+----
+
+The following conditions are satisfied for it…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/SizeAndLocationSpec.groovy[tag=single_element,indent=0]
+----
+
+To obtain any of the properties for all matched elements, you can use the Groovy spread operator.
+
+[source,groovy]
+----
+include::{test-dir}/navigator/SizeAndLocationSpec.groovy[tag=multiple_elements,indent=0]
+----
+
+== Accessing tag name, attributes, text and classes
+
+The `tag()`, `text()` and `classes()` methods as well as accessing attributes via the `@` notation or `attr()` method return the requested content on the *sole* matched element.
+If these methods are called on a multi element `Navigator` then a `SingleElementNavigatorOnlyMethodException` is thrown.
+The `classes()` method returns a `java.util.List` of class names sorted alphabetically.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/TagTextClassesAttributesSpec.groovy[tag=html,indent=0]
+----
+
+The following assertions are valid…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TagTextClassesAttributesSpec.groovy[tag=single_element,indent=0]
+----
+
+To obtain information about all matched content, you use the Groovy _spread operator_…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TagTextClassesAttributesSpec.groovy[tag=multiple_elements,indent=0]
+----
+
+== CSS properties
+
+Css properties of a single element navigator can be accessed using the `css()` method.
+If that method is called on a multi element `Navigator` then a `SingleElementNavigatorOnlyMethodException` is thrown.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/CssPropertiesSpec.groovy[tag=html,indent=0]
+----
+
+You can obtain the value of `float` css property in the following way…
+
+[source,css]
+----
+include::{test-dir}/navigator/CssPropertiesSpec.groovy[tag=css,indent=0]
+----
+
+[WARNING]
+====
+There are some limitations when it comes to retrieving css properties of `Navigator` objects.
+Color values should be returned as rgba strings, so, for example if the `background-color` property is set as `green` in the HTML source, the returned value will be `rgba(0, 255, 0, 1)`.
+Note that shorthand CSS properties (e.g. `background`, `font`, `border`, `border-top`, `margin`, `margin-top`, `padding`, `padding-top`, `list-style`, `outline`, `pause`, `cue`) are not returned,
+in accordance with the DOM CSS2 specification - you should directly access the longhand properties (e.g. `background-color`) to access the desired values.
+====
+
+== Sending keystrokes
+
+Given the following html…
+
+[source,html]
+----
+include::{test-dir}/navigator/KeystrokesSpec.groovy[tag=html,indent=0]
+----
+
+You can send keystrokes to the input (and any other content) via the leftShift operator, which is a shortcut for the `{webdriver-send-keys-api}` method of WebDriver.
+
+[source,groovy]
+----
+include::{test-dir}/navigator/KeystrokesSpec.groovy[tag=keystrokes,indent=0]
+----
+
+How content responds to the keystrokes depends on what the content is.
+
+:numbered!:
+
+=== Non characters (e.g. delete key, key chords, etc.)
+
+It is possible to send non-textual characters to content by using the WebDriver `{webdriver-keys-api}` enumeration…
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/NonCharacterKeystrokesSpec.groovy[tag=import,indent=0]
+include::{real-browser-test-dir}/navigator/NonCharacterKeystrokesSpec.groovy[tag=keystrokes,indent=0]
+----
+
+Here we are sending a “control-c” to an input.
+
+See the documentation for `{webdriver-keys-api}` enumeration for more information on the possible keys.
+
+:numbered:
+
+== Accessing input values
+
+The value of `input`, `select` and `textarea` elements can be retrieved and set with the `value` method.
+Calling `value()` with no arguments will return the String value of _the sole_ element in the Navigator.
+If that method is called on a multi element `Navigator` then a `SingleElementNavigatorOnlyMethodException` is thrown.
+Calling `value(value)` will set the current value of _all_ elements in the Navigator.
+The argument can be of any type and will be coerced to a `String` if necessary.
+The exceptions are that when setting a `checkbox` value the method expects a `boolean` (or an existing checkbox value or label) and when setting a multiple `select` the method expects an array or
+`Collection` of values.
+
+== Form control shortcuts
+
+Interacting with form controls (`input`, `select` etc.) is such a common task in web functional testing that Geb provides convenient shortcuts for common functions.
+
+Geb supports the following shortcuts for dealing with form controls.
+
+Consider the following HTML…
+
+[source,html]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=html,indent=0]
+----
+
+The value can be read and written via property notation…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=value_shortcuts,indent=0]
+----
+
+These are literally shortcuts for…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=value_equivalents,indent=0]
+----
+
+There is also a shortcut for obtaining a navigator based on a control name…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=element_shortcut,indent=0]
+----
+
+[NOTE]
+====
+In the above and below examples with form controls we are using code like `$(&quot;form&quot;).someInput` where we could be using just `someInput` as long as there is only one control with the
+_name_ `someInput` on the page.
+In the examples we are using `$(&quot;form&quot;).someInput` to hopefully be clearer.
+====
+
+If your content definition (either a page or a module) describes content which is an `input`, `select` or `textarea`, you can access and set its value the same way as described above for forms.
+Given a page and module definitions for the above mentioned HTML:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=content_definitions,indent=0]
+----
+
+The following will pass:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=content_shortcuts,indent=0]
+----
+
+As well as:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FormShortcutsSpec.groovy[tag=module_shortcuts,indent=0]
+----
+
+== Setting form control values
+
+[NOTE]
+====
+The following examples describe usage of form controls only using code like `$(&quot;form&quot;).someInput`.
+Given a content definition `myContent { $(&quot;form&quot;).someInput }`, you can substitute `$(&quot;form&quot;).someInput` in the examples with `myContent`.
+====
+
+[WARNING]
+====
+Trying to set a value on an element which is not one of `input`, `select` or `textarea` will cause an `UnableToSetElementException` to be thrown.
+====
+
+=== Select
+
+Select values are set by assigning the value or text of the required option. Assigned values are automatically coerced to String. For example…
+
+[source,html]
+----
+include::{test-dir}/navigator/SelectSpec.groovy[tag=html,indent=0]
+----
+
+We can select options with…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/SelectSpec.groovy[tag=setting_value,indent=0]
+----
+<1> First option selected by its value attribute.
+<2> Second option selected by its value attribute with argument coercion.
+<3> Third option selected by its text.
+
+If you attempt to set a select to a value that does not match the value or text of any options, an `IllegalArgumentException` will be thrown.
+
+=== Multiple select
+
+If the select has the `multiple` attribute it is set with a array or `Collection` of values.
+Any options not in the values are un-selected.
+For example…
+
+[source,html]
+----
+include::{test-dir}/navigator/MultiSelectSpec.groovy[tag=html,indent=0]
+----
+
+We can select options with…
+
+
+[source,groovy]
+----
+include::{test-dir}/navigator/MultiSelectSpec.groovy[tag=setting_values,indent=0]
+----
+<1> Second and third options selected by their value attributes.
+<2> First, fourth and fifth options selected by their value attributes with argument coercion.
+<3> First and last options selected by their text.
+<4> All options un-selected.
+
+If the collection being assigned contains a value that does not match the value or text of any options, an `IllegalArgumentException` will be thrown.
+
+=== Checkbox
+
+Checkboxes are generally checked/unchecked by setting their value to `true` or `false`.
+
+Consider the following html…
+
+[source,html]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=single_html,indent=0]
+----
+
+You can set a single checkbox in the following manner…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=single,indent=0]
+----
+
+Calling `value()` on a checked checkbox will return the value of its `value` attribute, i.e:
+
+[source,html]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=checked_html,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=checked,indent=0]
+----
+
+Calling `value()` on an unchecked checkbox will return `null`, i.e:
+
+[source,html]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=unchecked_html,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=unchecked,indent=0]
+----
+
+In general you should use {groovy-truth} when checking if a checkbox is checked:
+
+[source,html]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=truth_html,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=truth,indent=0]
+----
+
+=== Multiple checkboxes
+
+You can also check a checkbox by explicitly setting its `value` or using its label. This is useful when you have a number of checkboxes with the same name, i.e.:
+
+[source,html]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=multiple_html,indent=0]
+----
+
+You can select dog as your pet type as follows:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=multiple_single_choice,indent=0]
+----
+
+If you wish to select multiple checkboxes instead of only one then you can use a collection as the value:
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=multiple,indent=0]
+----
+
+When checking if a checkbox is checked and there are multiple checkboxes with the same name make sure that you use a navigator that holds only one of them before calling `value()` on it:
+
+[source,html]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=truth_multiple_html,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/navigator/CheckboxSpec.groovy[tag=truth_multiple,indent=0]
+----
+
+=== Radio
+
+Radio values are set by assigning the value of the radio button that is to be selected or the label text associated with a radio button.
+
+For example, with the following radio buttons…
+
+[source,html]
+----
+include::{test-dir}/navigator/RadioSpec.groovy[tag=html,indent=0]
+----
+
+We can select the radios by value…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/RadioSpec.groovy[tag=by_value,indent=0]
+----
+
+Or by label text…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/RadioSpec.groovy[tag=by_label,indent=0]
+----
+
+=== Text inputs and textareas
+
+In the case of a text `input` or a `textarea`, the assigned value becomes the element's _value_ attribute.
+
+[source,html]
+----
+include::{test-dir}/navigator/TextInputAndAreaSpec.groovy[tag=html,indent=0]
+----
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TextInputAndAreaSpec.groovy[tag=setting_value,indent=0]
+----
+
+It is also possible to append text by using the send keys shorthand…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/TextInputAndAreaSpec.groovy[tag=typing,indent=0]
+----
+
+Which an also be used for non-character keys…
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/BackspaceSpec.groovy[tag=import,indent=0]
+include::{real-browser-test-dir}/navigator/BackspaceSpec.groovy[tag=backspace,indent=0]
+----
+
+[WARNING]
+====
+WebDriver has some issues with textareas and surrounding whitespace.
+Namely, some drivers implicitly trim whitespace from the beginning and end of the value.
+You can track this issue link:http://code.google.com/p/selenium/issues/detail?id=2131[here].
+====
+
+=== File upload
+
+It's currently not possible with WebDriver to simulate the process of a user clicking on a file upload control and choosing a file to upload via the normal file chooser.
+However, you can directly set the value of the upload control to the _absolute path_ of a file on the system where the driver is running and on form submission that file will be uploaded.
+So if your html looks like…
+
+[source,html]
+----
+include::{test-dir}/navigator/FileUploadSpec.groovy[tag=html,indent=0]
+----
+
+And the `uploadedFile` variable holds a `File` instance pointing at the file you want to upload then this is how you can set the value of the upload control…
+
+[source,groovy]
+----
+include::{test-dir}/navigator/FileUploadSpec.groovy[tag=upload,indent=0]
+----
+
+== Complex interactions
+
+WebDriver supports interactions that are more complex than simply clicking or typing into items, such as dragging.
+You can use this API directly when using Geb or use the more Geb friendly <<interact-closures, `interact` DSL>>.
+
+[[using-actions]]
+=== Using the WebDriver `Actions` API directly
+
+A Geb navigator object is built on top of a collection of WebDriver {webelement-api} objects.
+It is possible to access the contained `WebElement` instances via the following methods on navigator objects:
+
+[source,groovy]
+----
+include::{core-source-dir}/geb/navigator/Navigator.groovy[tag=web_element_returning_methods,indent=0]
+----
+
+By using the methods of the WebDriver `{actions-api}` class with `WebElement` instances, complex user gestures can be emulated.
+First you will need to create an `Actions` instance after obtaining the WebDriver driver:
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/InteractionsSpec.groovy[tag=actions_creation,indent=0]
+----
+
+Next, use methods of `Actions` to compose a series of UI actions, then call `build()` to create a concrete `Action`:
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/InteractionsSpec.groovy[tag=action_definition,indent=0]
+----
+
+Finally, call `perform()` to actually trigger the desired mouse or keyboard behavior:
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/InteractionsSpec.groovy[tag=action_execution,indent=0]
+----
+
+[[interact-closures]]
+=== Using `interact()`
+
+To avoid having to manage building and performing an `Action` via the lifecycle of an `Actions` instance as well as having to obtain `WebElement` instances from `Navigator` when emulating user
+gestures, Geb adds the `interact()` method.
+When using that method, an `Actions` instance is implicitly created, built into an `Action`, and performed.
+The delegate of the closure passed to `interact()` is an instance of `{interact-delegate-api}` which declares the same methods as `Actions` but takes `Navigator` as arguments for methods of `Actions`
+which take `WebElement`.
+
+This `interact()` call performs the same work as the calls in the <<using-actions>> section:
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/InteractionsSpec.groovy[tag=interact,indent=0]
+----
+
+For the full list of available methods that can be used for emulating user gestures see the documentation for the `{interact-delegate-api}` class.
+
+=== Interact examples
+
+Calls to `interact()` can be used to perform behaviors that are more complicated than clicking buttons and anchors or typing in input fields.
+
+==== Drag and drop
+
+`clickAndHold()`, `moveByOffset()`, and then `release()` will drag and drop an element on the page.
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/DragAndDropSpec.groovy[tag=verbose,indent=0]
+----
+
+Drag-and-dropping can also be accomplished using the `dragAndDropBy()` convenience method from the Actions API:
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/DragAndDropSpec.groovy[tag=convenience,indent=0]
+----
+
+In this particular example, the element will be clicked then dragged 150 pixels to the right and 200 pixels downward before being released.
+
+[WARNING]
+====
+Moving to arbitrary locations with the mouse is currently not supported by the HTMLUnit driver, but moving directly to elements is.
+====
+
+==== Control-clicking
+
+Control-clicking several elements, such as items in a list, is performed the same way as shift-clicking.
+
+[source,groovy]
+----
+include::{real-browser-test-dir}/navigator/ControlClickSpec.groovy[tag=import,indent=0]
+include::{real-browser-test-dir}/navigator/ControlClickSpec.groovy[tag=interact,indent=0]
+----

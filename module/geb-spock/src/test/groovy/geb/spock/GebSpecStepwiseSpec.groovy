@@ -16,38 +16,49 @@ package geb.spock
 
 import geb.Page
 import spock.lang.*
-import geb.test.util.GebSpecWithServer
+import geb.test.CallbackHttpServer
 
 @Stepwise
-class GebSpecStepwiseSpec extends GebSpecWithServer {
+class GebSpecStepwiseSpec extends GebReportingSpec {
 
-	
-	def setupSpec() {
-		server.get = { req, res ->
-			res.outputStream << """
-			<html>
-			<body>
-				<p>stuff</p>
-			</body>
-			</html>"""
-		}		
-	}
+    @Shared
+        server = new CallbackHttpServer()
 
-	def "go to the page"() {
-		when:
-		to FirstPage
-		then:
-		at FirstPage
-	}
-	
-	def "make sure we are still at the page"() {
-		expect:
-		at FirstPage
-	}
-	
+    def setupSpec() {
+        server.start()
+        server.get = { req, res ->
+            res.outputStream << """
+            <html>
+            <body>
+                <p>stuff</p>
+            </body>
+            </html>"""
+        }
+    }
+
+    def setup() {
+        baseUrl = server.baseUrl
+        go()
+    }
+
+    def "go to the page"() {
+        when:
+        to FirstPage
+        then:
+        at FirstPage
+    }
+
+    def "make sure we are still at the page"() {
+        expect:
+        at FirstPage
+    }
+
+    def cleanupSpec() {
+        server.stop()
+    }
 }
 
 class FirstPage extends Page {
-	static url = "/"
-	static at = { $("p", 0).text() == "stuff" }
+    static url = "/"
+    static at = { $("p", 0).text() == "stuff" }
 }

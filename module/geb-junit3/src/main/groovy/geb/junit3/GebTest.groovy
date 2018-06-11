@@ -14,51 +14,52 @@
  */
 package geb.junit3
 
-import geb.*
-import org.openqa.selenium.WebDriver
+import geb.Browser
+import geb.Configuration
+import geb.ConfigurationLoader
 
 class GebTest extends GroovyTestCase {
 
-	String gebConfEnv = null
-	String gebConfScript = null
-	
-	private Browser _browser
+    String gebConfEnv = null
+    String gebConfScript = null
 
-	Configuration createConf() {
-		new ConfigurationLoader(gebConfEnv).getConf(gebConfScript)
-	}
-	
-	Browser createBrowser() {
-		new Browser(createConf())
-	}
+    private Browser browser
 
-	Browser getBrowser() {
-		if (_browser == null) {
-			_browser = createBrowser()
-		}
-		_browser
-	}
+    Configuration createConf() {
+        new ConfigurationLoader(gebConfEnv, System.properties, new GroovyClassLoader(getClass().classLoader)).getConf(gebConfScript)
+    }
 
-	void resetBrowser() {
-		if (_browser?.config.autoClearCookies) {
-			_browser.clearCookiesQuietly()
-		}
-		_browser = null
-	}
+    Browser createBrowser() {
+        new Browser(createConf())
+    }
 
-	def methodMissing(String name, args) {
-		getBrowser()."$name"(*args)
-	}
+    Browser getBrowser() {
+        if (browser == null) {
+            browser = createBrowser()
+        }
+        browser
+    }
 
-	def propertyMissing(String name) {
-		getBrowser()."$name"
-	}
-	
-	def propertyMissing(String name, value) {
-		getBrowser()."$name" = value
-	}
+    void resetBrowser() {
+        if (browser?.config?.autoClearCookies) {
+            browser.clearCookiesQuietly()
+        }
+        browser = null
+    }
 
-	void tearDown() {
-		resetBrowser()
-	}
+    def methodMissing(String name, args) {
+        getBrowser()."$name"(*args)
+    }
+
+    def propertyMissing(String name) {
+        getBrowser()."$name"
+    }
+
+    def propertyMissing(String name, value) {
+        getBrowser()."$name" = value
+    }
+
+    void tearDown() {
+        resetBrowser()
+    }
 }

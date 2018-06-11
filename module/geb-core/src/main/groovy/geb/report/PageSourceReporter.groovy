@@ -21,52 +21,33 @@ import geb.Browser
  */
 class PageSourceReporter extends ReporterSupport {
 
-	static public final NO_PAGE_SOURCE_SUBSTITUTE = "-- no page source --"
-	
-	// Can't use optional args for doClean as it causes a VerifierError (Groovy bug)
-	
-	PageSourceReporter(File dir) {
-		this(dir)
-	}
+    static public final NO_PAGE_SOURCE_SUBSTITUTE = "-- no page source --"
 
-	PageSourceReporter(File dir, boolean doClean) {
-		super(dir, doClean)
-	}
-	
-	/**
-	 * Uses {@link geb.report.ReporterSupport#getDirForClass()} with the given args to
-	 * determine the true report dir to use.
-	 */
-	PageSourceReporter(File dir, Class clazz) {
-		super(getDirForClass(dir, clazz))
-	}
+    @Override
+    void writeReport(ReportState reportState) {
+        def file = getReportFile(reportState)
+        writePageSource(file, reportState.browser)
+        notifyListeners(reportState, [file])
+    }
 
-	/**
-	 * Uses {@link geb.report.ReporterSupport#getDirForClass()} with the given args to
-	 * determine the true report dir to use.
-	 */
-	PageSourceReporter(File dir, Class clazz, boolean doClean) {
-		super(getDirForClass(dir, clazz), doClean)
-	}
-	
-	void writeReport(String reportNameBase, Browser browser) {
-		writePageSource(getReportFile(reportNameBase, browser), browser)
-	}
-	
-	protected getReportFile(String reportNameBase, Browser browser) {
-		getFile(reportNameBase, getPageSourceFileExtension(browser))
-	}
-	
-	protected writePageSource(File file, Browser browser) {
-		file << getPageSource(browser)
-	}
-	
-	protected getPageSource(Browser browser) {
-		browser.driver.pageSource ?: NO_PAGE_SOURCE_SUBSTITUTE
-	}
-	
-	protected getPageSourceFileExtension(Browser browser) {
-		"html"
-	}
+    protected getReportFile(ReportState reportState) {
+        getFile(reportState.outputDir, reportState.label, getPageSourceFileExtension(reportState.browser))
+    }
+
+    protected writePageSource(File file, Browser browser) {
+        file.write(getPageSource(browser))
+    }
+
+    protected getPageSource(Browser browser) {
+        browser.driver.pageSource ?: NO_PAGE_SOURCE_SUBSTITUTE
+    }
+
+    /**
+     * Here to allow smarter calculation of the extension if necessary
+     */
+    @SuppressWarnings("UnusedMethodParameter")
+    protected getPageSourceFileExtension(Browser browser) {
+        "html"
+    }
 
 }

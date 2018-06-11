@@ -14,21 +14,68 @@
  */
 package geb
 
-import geb.test.util.*
-import geb.conf.*
+import geb.test.GebSpecWithCallbackServer
+import spock.lang.Unroll
 
-class BrowserSpec extends GebSpec {
+class BrowserSpec extends GebSpecWithCallbackServer {
 
-	def "clear cookies"() {
-		when:
-		browser.clearCookies()
-		then:
-		notThrown(Throwable)
-	}
+    def setupSpec() {
+        responseHtml {
+            body {
+            }
+        }
+    }
 
-	def "load default config"() {
-		expect:
-		browser.config.rawConfig.testValue == true
-	}
-	
+    def "clear cookies"() {
+        when:
+        browser.clearCookies()
+
+        then:
+        notThrown(Throwable)
+    }
+
+    def "clear multiple cookies"() {
+        given:
+        browser.driver.javascriptEnabled = false
+        go()
+
+        when:
+        browser.clearCookies('http://gebish.org')
+
+        then:
+        notThrown(Throwable)
+
+        and:
+        browser.currentUrl.contains('gebish.org')
+    }
+
+    def "load default config"() {
+        expect:
+        browser.config.rawConfig.testValue == true
+    }
+
+    def "current url is returned from browser"() {
+        when:
+        go()
+
+        then:
+        browser.currentUrl == server.baseUrl
+    }
+
+    @Unroll
+    def "page setting methods return an instance set as the current page when using #scenario"() {
+        expect:
+        page(argument).getClass() == BrowserSpecPage
+
+        where:
+        scenario             | argument
+        "class"              | BrowserSpecPage
+        "instance"           | new BrowserSpecPage()
+        "array of classes"   | [BrowserSpecPage] as Class[]
+        "array of instances" | [new BrowserSpecPage()] as Page[]
+    }
+}
+
+class BrowserSpecPage extends Page {
+    static at = { true }
 }

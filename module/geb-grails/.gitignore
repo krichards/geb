@@ -1,7 +1,0 @@
-target
-*.log
-*.zip
-.DS_Store
-plugin.xml
-docs
-build

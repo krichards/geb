@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *		http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,44 +19,46 @@ import geb.error.UnableToLoadAnyDriversException
 
 class NameBasedDriverFactory implements DriverFactory {
 
-	public static final String DRIVER_SEPARATOR = ":"
+    public static final String DRIVER_SEPARATOR = ":"
 
-	final ClassLoader classLoader
-	final String driverNames
-	
-	NameBasedDriverFactory(ClassLoader classLoader, String driverNames) {
-		this.classLoader = classLoader
-		this.driverNames = driverNames
-	}
-	
-	WebDriver getDriver() {
-		def potentials = getPotentialDriverClassNames()
+    final ClassLoader classLoader
+    final String driverNames
 
-		def driverClass
-		for (potential in potentials) {
-			driverClass = attemptToLoadDriverClass(potential)
-			if (driverClass) break
-		}
-		
-		if (driverClass) {
-			driverClass.newInstance()
-		} else {
-			throw new UnableToLoadAnyDriversException(potentials as String[])
-		}
-	}
-	
-	protected attemptToLoadDriverClass(String driverClassName) {
-		try {
-			classLoader.loadClass(driverClassName)
-		} catch (ClassNotFoundException e) {
-			null
-		}
-	}
-	
-	protected getPotentialDriverClassNames() {
-		driverNames.split(DRIVER_SEPARATOR).collect { 
-			DriverRegistry.translateFromShortNameIfRequired(it)
-		}
-	}
+    NameBasedDriverFactory(ClassLoader classLoader, String driverNames) {
+        this.classLoader = classLoader
+        this.driverNames = driverNames
+    }
+
+    WebDriver getDriver() {
+        def potentials = getPotentialDriverClassNames()
+
+        def driverClass
+        for (potential in potentials) {
+            driverClass = attemptToLoadDriverClass(potential)
+            if (driverClass) {
+                break
+            }
+        }
+
+        if (driverClass) {
+            driverClass.newInstance()
+        } else {
+            throw new UnableToLoadAnyDriversException(potentials as String[])
+        }
+    }
+
+    protected attemptToLoadDriverClass(String driverClassName) {
+        try {
+            classLoader.loadClass(driverClassName)
+        } catch (ClassNotFoundException e) {
+            null
+        }
+    }
+
+    protected getPotentialDriverClassNames() {
+        driverNames.split(DRIVER_SEPARATOR).collect {
+            DriverRegistry.translateFromShortNameIfRequired(it)
+        }
+    }
 
 }

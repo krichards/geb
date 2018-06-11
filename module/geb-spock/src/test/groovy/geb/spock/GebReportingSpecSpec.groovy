@@ -14,68 +14,216 @@
  */
 package geb.spock
 
-import spock.lang.*
-import geb.test.util.GebSpecWithServer
+import geb.report.ReportState
+import geb.report.Reporter
+import geb.report.ReportingListener
+import geb.test.CallbackHttpServer
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.Result
+import org.spockframework.runtime.ConditionNotSatisfiedError
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
+import spock.util.EmbeddedSpecRunner
 
-@Stepwise
-class GebReportingSpecSpec extends GebSpecWithServer {
-	
-	static responseText = """
-		<html>
-		<body>
-			<div class="d1" id="d1">d1</div>
-		</body>
-		</html>
-	"""
-	
-	static garbage = "asdfajsdifoamsdfoiawdncwonc"
-	
-	def setupSpec() {
-		server.get = { req, res ->
-			res.outputStream << responseText
-		}
-		
-		def reportsDir = getClassReportDir()
-		def firstOutputFile = getFirstOutputFile()
-		
-		if (!reportsDir.exists()) {
-			assert reportsDir.mkdirs()
-		}
-		
-		if (!firstOutputFile.exists()) {
-			assert firstOutputFile.createNewFile()
-		}
-		
-		// Put some jibberish in this file, so we can test
-		// that it was actually removed by the reporting spec
-		// setup() method.
-		firstOutputFile << garbage
-	}
-	
-	def getClassReportDir() {
-		new File(getReportDir(), this.class.name.replace('.', '/'))
-	}
-	
-	def getFirstOutputFile() {
-		new File(getClassReportDir(), "1-1-a request is made-end.html")
-	}
-	
-	def "a request is made"() {
-		given:
-		go("/") // make a request
-	}
-	
-	def "a report should have been created with the response text"() {
-		given:
-		def report = getFirstOutputFile()
-		expect:
-		report.exists()
-		!report.text.contains(garbage)
-	}
+class GebReportingSpecSpec extends Specification {
 
-	def "there should be a second report"() {
-		expect:
-		getClassReportDir().listFiles().any { it.name.startsWith("2") }
-	}
-	
+    final static String REPORTING_SPEC_NAME = "GebReportingExtendingSpec"
+
+    EmbeddedSpecRunner specRunner = new EmbeddedSpecRunner(throwFailure: false)
+
+    @Rule
+    TemporaryFolder tempDir
+
+    @Shared
+    @AutoCleanup("stop")
+    def server = new CallbackHttpServer()
+
+    def setupSpec() {
+        server.start()
+        server.html {
+            body {
+                div "Test page"
+            }
+        }
+    }
+
+    def setup() {
+        specRunner.addClassImport(GebReportingSpec)
+        specRunner.addClassImport(Unroll)
+        specRunner.addClassImport(Reporter)
+        specRunner.addClassImport(ReportingListener)
+        specRunner.addClassImport(ReportState)
+    }
+
+    File getReportDir() {
+        new File(tempDir.root, "reports")
+    }
+
+    File getReportGroupDir() {
+        new File(reportDir, REPORTING_SPEC_NAME)
+    }
+
+    File reportFile(String name) {
+        new File(reportGroupDir, name)
+    }
+
+    def "report named after the test and which contains response text is made at the end of a test"() {
+        when:
+        runReportingSpec """
+            def "a request is made"() {
+                given:
+                go "/"
+            }
+        """
+
+        then:
+        reportFile("001-001-a request is made-end.html").text.startsWith("<?xml")
+    }
+
+    def "report is written after each test"() {
+        when:
+        runReportingSpec """
+            def "first test"() {
+                given:
+                go "/"
+            }
+
+            def "second test"() {
+                given:
+                go "/"
+            }
+        """
+
+        then:
+        reportFile("001-001-first test-end.html").exists()
+        reportFile("002-001-second test-end.html").exists()
+    }
+
+    def "report is not written after a successful test when reporting on failure only is enabled"() {
+        when:
+        runReportingSpec """
+            def "passing test"() {
+                given:
+                config.reportOnTestFailureOnly = true
+                go "/"
+
+                expect:
+                true
+            }
+        """
+
+        then:
+        !reportGroupDir.listFiles()
+    }
+
+    def "report is written after a failing test when reporting on failure only is enabled"() {
+        when:
+        runReportingSpec """
+            def "failing test"() {
+                given:
+                config.reportOnTestFailureOnly = true
+                go "/"
+
+                expect:
+                false
+            }
+        """
+
+        then:
+        reportFile("001-001-failing test-failure.html").exists()
+    }
+
+    def "report is written after a failing unrolled test when reporting on failure only is enabled"() {
+        when:
+        runReportingSpec """
+            @Unroll
+            def "failing test"() {
+                given:
+                config.reportOnTestFailureOnly = true
+                go "/"
+
+                expect:
+                false
+
+                where:
+                parameter << [0]
+            }
+        """
+
+        then:
+        reportFile("001-001-failing test_0_-failure.html").exists()
+    }
+
+    def "failure when writing a report does not overwrite the original test failure"() {
+        when:
+        def result = runReportingSpec """
+            def "failing test"() {
+                given:
+                config.reportOnTestFailureOnly = true
+                config.reporter = new Reporter() {
+                    void writeReport(ReportState reportState) {
+                        throw new Exception()
+                    }
+
+                    void addListener(ReportingListener listener) {
+                    }
+                }
+
+                go "/"
+
+                expect:
+                false
+            }
+        """
+
+        then:
+        result.failures.first().exception in ConditionNotSatisfiedError
+    }
+
+    def "report called from fixture method should create report with default name"() {
+        when:
+        specRunner.run """
+        class $REPORTING_SPEC_NAME extends GebReportingSpec {
+
+            def setupSpec() {
+                ${configuration}
+
+                go "/"
+                report('Report in setupSpec')
+            }
+
+            def "passing test"() {
+                expect:
+                true
+            }
+        }
+        """
+
+        then:
+        reportFile("001-000-fixture-Report in setupSpec.html").text.startsWith("<?xml")
+        reportFile("001-001-passing test-end.html").text.startsWith("<?xml")
+    }
+
+    Result runReportingSpec(String body) {
+        specRunner.run """
+            class $REPORTING_SPEC_NAME extends GebReportingSpec {
+
+                def setup() {
+                    ${configuration}
+                }
+
+                $body
+            }
+        """
+    }
+
+    private String getConfiguration() {
+        """
+        baseUrl = "${server.baseUrl}"
+        config.rawConfig.reportsDir = "${reportDir.absolutePath.replaceAll("\\\\", "\\\\\\\\")}"
+        """
+    }
 }

@@ -1,0 +1,18 @@
+apply plugin: "com.energizedwork.idea-base"
+
+ideaProjectComponents { components ->
+    components.file "gradle/idea/codeStyle.xml"
+}
+
+ideaJunit {
+    tasks = [':integration:geb-gradle:classes', ':integration:geb-gradle:pluginUnderTestMetadata']
+}
+
+idea {
+    project {
+        jdkName "1.8"
+
+        wildcards += ['good-conf.groovy', 'gebScript*.groovy']
+    }
+}
+

@@ -14,22 +14,29 @@
  */
 package geb.report
 
-import geb.Browser
-
 /**
  * A reporter can take a snapshot of the browser state, using a given name as the
  * base for whatever it produces. A common usage of a reporter is to take snapshots
  * before and after test methods.
- * 
+ *
  * @see geb.report.ReporterSupport
- * @see geb.report.ScreenshotAndPageSourceReporter
+ * @see ScreenshotReporter
  */
 interface Reporter {
-	
-	/**
-	 * Takes a snapshot of the given browser's state, using the given name
-	 * as the base name for anything (e.g. file) that is produced.
-	 */
-	void writeReport(String reportNameBase, Browser browser)
-	
+
+    /**
+     * Takes a snapshot of the given browser's state, using the given name
+     * as the base name for anything (e.g. file) that is produced.
+     */
+    void writeReport(ReportState reportState)
+
+    /**
+     * Registers an object to be notified when a report is taken.
+     *
+     * Adding a listener that has previously been added (based on equals()) is a noop.
+     *
+     * @param listener
+     */
+    void addListener(ReportingListener listener)
+
 } 

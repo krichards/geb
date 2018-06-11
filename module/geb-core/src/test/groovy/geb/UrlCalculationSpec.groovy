@@ -14,85 +14,78 @@
  */
 package geb
 
-import geb.test.util.*
-import spock.lang.*
-import geb.error.*
-import geb.page.error.*
+import geb.test.GebSpecWithCallbackServer
+import spock.lang.Unroll
 
-class UrlCalculationSpec extends GebSpecWithServer {
+class UrlCalculationSpec extends GebSpecWithCallbackServer {
 
-	def setupSpec() {
-		server.get = { req, res ->
-			res.outputStream << """
-			<html>
-			<body>
-				<div class="url">${req.requestURL + (req.queryString ? "?${req.queryString}" : "")}</div>
-				<div class="path">$req.requestURI</div>
-				<div class="params">$req.parameterMap</div>
-			</body>
-			</html>"""
-		}
-	}
-	
-	protected toRequestParameterMapString(map) {
-		def requestMap = [:]
-		map.each { k, v ->
-			if (!requestMap.containsKey(k)) {
-				requestMap[k] = []
-			}
-			(v instanceof Collection ? v : [v]).each {
-				requestMap[k] << it
-			}
-		}
-		requestMap.toString()
-	}
-	
-	@Unroll("to page: page = #page, args = #args, params = #params, path = #path")
-	def "t1"() {
-		when:
-		to(page, *:params, *args)
-		then:
-		requestPath == path
-		requestParams == toRequestParameterMapString(params)
-		where:
-		page                        | params      | args       | path
-		UrlCalculationSpecPage      | [:]         | []         | "/"
-		UrlCalculationSpecPage      | [a: 1]      | []         | "/"
-		UrlCalculationSpecPage      | [:]         | ["a"]      | "/a"
-		UrlCalculationSpecPage      | [:]         | ["a", "b"] | "/a/b"
-		UrlCalculationSpecPage      | [a: [1,2]]  | []         | "/"
-	}
+    def setupSpec() {
+        callbackServer.get = { req, res ->
+            res.outputStream << """
+            <html>
+            <body>
+                <div class="url">${req.requestURL + (req.queryString ? "?${req.queryString}" : "")}</div>
+                <div class="path">$req.requestURI</div>
+                <div class="params">$req.parameterMap</div>
+            </body>
+            </html>"""
+        }
+    }
 
-	@Unroll("go: baseUrl = #baseUrl, params = #params, path = #path, expectedRequestPath = #expectedRequestPath")
-	def "t2"() {
-		when:
-		browser.baseUrl = base
-		go(path, *:params)
-		page UrlCalculationSpecPage
-		
-		then:
-		requestUrl == expectedRequestURL
+    protected toRequestParameterMapString(map) {
+        def requestMap = [:]
+        map.each { k, v ->
+            if (!requestMap.containsKey(k)) {
+                requestMap[k] = []
+            }
+            (v instanceof Collection ? v : [v]).each {
+                requestMap[k] << it
+            }
+        }
+        requestMap.toString()
+    }
 
-		where:
-		base           | params     | path       | expectedRequestURL
-		server.baseUrl | [:]        | ""         | server.baseUrl
-		server.baseUrl | [a:1]      | ""         | server.baseUrl + "?a=1"
-		server.baseUrl | [:]        | "a/b"      | server.baseUrl + "a/b"
-	}
+    @Unroll("to page: page = #page, args = #args, params = #params, path = #path")
+    def "t1"() {
+        when:
+        to(page, *: params, *args)
+        then:
+        requestPath == path
+        requestParams == toRequestParameterMapString(params)
+        where:
+        page                   | params      | args       | path
+        UrlCalculationSpecPage | [:]         | []         | "/"
+        UrlCalculationSpecPage | [a: 1]      | []         | "/"
+        UrlCalculationSpecPage | [:]         | ["a"]      | "/a"
+        UrlCalculationSpecPage | [:]         | ["a", "b"] | "/a/b"
+        UrlCalculationSpecPage | [a: [1, 2]] | []         | "/"
+        UrlCalculationSpecPage | [a: '?=$']  | []         | "/"
+    }
 
+    @Unroll("go: baseUrl = #base, params = #params, path = #path")
+    def "t2"() {
+        when:
+        browser.baseUrl = base
+        go(path, *: params)
+        page UrlCalculationSpecPage
+
+        then:
+        requestUrl == expectedRequestURL
+
+        where:
+        base           | params   | path     | expectedRequestURL
+        server.baseUrl | [:]      | ""       | server.baseUrl
+        server.baseUrl | [a: 1]   | ""       | server.baseUrl + "?a=1"
+        server.baseUrl | [:]      | "a/b"    | server.baseUrl + "a/b"
+        server.baseUrl | [a: '$'] | "?b=%3D" | server.baseUrl + "?b=%3D&a=%24"
+    }
 }
-
 
 class UrlCalculationSpecPage extends Page {
 
-	static content = {
-		requestUrl(dynamic: true) { $("div.url").text() }
-		requestPath(dynamic: true) { $("div.path").text() }
-		requestParams(dynamic: true) { $("div.params").text() }
-	}
-
-}
-
-class UrlCalculationSpecPageNoUrl extends UrlCalculationSpecPage {
-
+    static content = {
+        requestUrl { $("div.url").text() }
+        requestPath { $("div.path").text() }
+        requestParams { $("div.params").text() }
+    }
 }

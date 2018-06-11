@@ -1,13 +1,28 @@
-include "module:geb-core", 
-        "module:test-utils", 
-        "module:geb-spock", 
-        "module:geb-junit3", 
-        "module:geb-junit4",
-        "module:geb-grails",
-        "module:geb-easyb",
-        "doc:manual",
-        "doc:site-app"
+include "module:geb-core",
+    "module:geb-spock",
+    "module:geb-junit3",
+    "module:geb-junit4",
+    "module:geb-testng",
+    "module:geb-implicit-assertions",
+    "module:geb-ast",
+    "module:geb-waiting",
+    "module:geb-exceptions",
+    "internal:test-support",
+    "integration:geb-gradle",
+    "doc:manual",
+    "doc:manual-snippets",
+    "doc:site",
+    "compatibility:groovy-2.3.7",
+    "compatibility:spock-1.0"
 
-if (hasProperty("withSamples")) {
-	include "samples:google"
+rootProject.name = 'geb'
+
+def setBuildFile(project) {
+    project.buildFileName = "${project.name}.gradle"
+
+    project.children.each {
+        setBuildFile(it)
+    }
 }
+
+setBuildFile(rootProject)

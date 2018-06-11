@@ -1,0 +1,342 @@
+[[configuration]]
+= Configuration
+
+Geb provides a configuration mechanism that allows you to control various aspects of Geb in a flexible way.
+At the heart of this is the `{configuration-api}` object, which the `{browser-api}` and other objects query at runtime.
+
+There are three general mechanisms for influencing configuration; _system properties_, _config script_ and the _build adapter_.
+
+== Mechanisms
+
+=== The config script
+
+Geb attempts to load a `{config-slurper-api}` script named `GebConfig.groovy` from the _default package_ (in other words, in the root of a directory that is on the classpath).
+If it is not found, Geb will try to load a `{config-slurper-api}` class named `GebConfig` from the _default package_ - this is useful if you run tests that use Geb from an IDE because you won't have
+to specify `GebConfig.groovy` as a resource, Geb will simply fall back to the compiled version of the script.
+If both script and class are not found Geb will continue using all defaults.
+
+First, the script is looked for with the *executing thread's context class loader* and if it is not found, then it is looked for with the class loader that loaded Geb.
+This covers 99% of scenarios out of the box perfectly well without any intervention.
+If however you do need to configure the context class loader to load the config script, you *must* make sure that it is either the same as the class loader that loaded Geb or a child of it.
+If the script is not found by both of those class loaders the procedure will be repeated but this time the class will be searched for - first using *executing thread's context class loader* and then
+using the class loader that loaded Geb.
+
+[NOTE]
+====
+If you are using a build tool such as link:http://gradle.org/[Gradle] or link:http://maven.apache.org/[Maven] that has the concept of test “resources”, then that directory is a suitable place.
+You can also put your script together with your compilation source and then the compiled version of the script will be used.
+====
+
+==== Environment sensitivity
+
+The Groovy `{config-slurper-api}` mechanism has built in support for environment sensitive configuration, and Geb leverages this by using the *`geb.env`* system property to determine the environment
+to use.
+An effective use of this mechanism is to configure different drivers based on the designated Geb “environment” (concrete details on how to do this further down).
+
+How you set the environment system property is going to be dependent on the build system you are using.
+For example, when using Gradle you could control the Geb environment by specifying it in the configuration of the test task running your tests…
+
+[source,groovy]
+----
+test {
+    systemProperty 'geb.env', 'windows'
+}
+----
+
+Other build environments will allow you to do this in different ways.
+
+=== System properties
+
+Some config options can be specified by system properties.
+In general, config options specified by system properties will _override_ values set in the config script.
+See the config options below for which options are controllable via system properties.
+
+[[build-adapter-config]]
+=== Build adapter
+
+The build adapter mechanism exists to allow Geb to integrate with development/build environments that logically dictate config options.
+
+This mechanism works by loading the name of the class (fully qualified) by the system property `geb.build.adapter` that must implement the `{build-adapter-api}` interface.
+Currently, the build adapter can only influence the base URL to use, and the location of the reports directory.
+
+If the `geb.build.adapter` system property is not explicitly set, it defaults to `{system-properties-build-adapter-api}.
+As you can probably deduce, this default implementation uses system properties to specify values, so is usable in most circumstances.
+See the linked API doc for the details of the specific system properties it looks for.
+
+[WARNING]
+====
+While the default build adapter uses system properties, it should not be considered to be the same as system property configuration due to values in the config script taking precedence over the build
+adapter which is not true for system properties.
+====
+
+== Config options
+
+[[driver-implementation-configuration]]
+=== Driver implementation
+
+The driver to use is specified by the config key `driver`, or the system property `geb.driver`.
+
+==== Factory closure
+
+In the config script it can be a closure that when invoked with no arguments returns an instance of `{webdriver-api}`…
+
+[source,groovy]
+----
+include::{test-dir}/configuration/DriverConfigSpec.groovy[tag=configuring_driver,indent=0]
+----
+
+This is the preferred mechanism, as it allows the most control over the drivers creation and configuration.
+
+You can use the `{config-slurper-api}` mechanism's environment sensitivity to configure different drivers per environment…
+
+[source,groovy]
+----
+include::{test-dir}/configuration/DriverConfigSpec.groovy[tag=env_sensitive_driver_config,indent=0]
+----
+
+[TIP]
+====
+WebDriver has the ability to drive browsers on a remote host, which is what we are using above.
+For more information consult the WebDriver documentation on `{remotewebdriver}` and `{remotewebdriver-server}`.
+====
+
+==== Driver class name
+
+The name of the driver class to use (it will be constructed with no arguments) can be specified as a string with the key `driver` in the config script or via the `geb.driver` system property
+(the class must implement the `{webdriver-api}` interface).
+
+[source,groovy]
+----
+include::{test-dir}/configuration/DriverConfigSpec.groovy[tag=configuring_driver_using_class_name,indent=0]
+----
+
+Or it can be one of the following short names: `ie`, `htmlunit`, `firefox`, `chrome` or `edge`. These will be implicitly expanded to their fully qualified class names…
+
+[source,groovy]
+----
+include::{test-dir}/configuration/DriverConfigSpec.groovy[tag=configuring_driver_using_driver_name,indent=0]
+----
+
+The following table gives the possible short names that can be used:
+
+|===
+|Short Name |Driver
+
+|`htmlunit` |{htmlunitdriver}[org.openqa.selenium.htmlunit.HtmlUnitDriver]
+|`firefox` |{firefoxdriver}[org.openqa.selenium.firefox.FirefoxDriver]
+|`ie` |{iedriver}[org.openqa.selenium.ie.InternetExplorerDriver]
+|`chrome` |{chromedriver}[org.openqa.selenium.chrome.ChromeDriver]
+|`edge` |{edgedriver}[org.openqa.selenium.edge.EdgeDriver]
+|===
+
+If no explicit driver is specified then Geb will look for the following drivers on the classpath in the order they are listed in the above table.
+If none of these classes can be found, a link:api/geb/error/UnableToLoadAnyDriversException.html[`UnableToLoadAnyDriversException`] will be thrown.
+
+=== Navigator factory
+
+It is possible to specify your own implementation of link:api/geb/navigator/factory/NavigatorFactory.html[`NavigatorFactory`] via configuration.
+This is useful if you want to extend the `{navigator-api}` class to provide your own behaviour extensions.
+
+Rather than inject your own `NavigatorFactory`, it is simpler to inject a custom link:api/geb/navigator/factory/InnerNavigatorFactory.html[`InnerNavigatorFactory`] which is a much simpler interface.
+To do this, you can specify a closure for the config key `innerNavigatorFactory`…
+
+[source,groovy]
+----
+include::{test-dir}/configuration/NavigatorFactoryConfigSpec.groovy[tag=config,indent=0]
+----
+
+This is a rather advanced use case.
+If you need to do this, check out the source code or get in touch via the mailing list if you need help.
+
+[[driver-caching-configuration]]
+=== Driver caching
+
+Geb's ability to cache a driver and re-use it for the lifetime of the JVM (i.e. <<implicit-driver-lifecycle, the implicit driver lifecycle>>) can be disabled by setting the `cacheDriver` config option
+to `false`.
+However, if you do this you become <<explicit-driver-lifecycle, responsible for quitting>> every driver that is created at the appropriate time.
+
+The default caching behavior is to cache the driver globally across the JVM.
+If you are using Geb in multiple threads this may not be what you want, as neither Geb `Browser` objects nor WebDriver at the core is thread safe.
+To remedy this, you can instruct Geb to cache the driver instance per thread by setting the config option `cacheDriverPerThread` to `true`.
+
+Also, by default Geb will register a shutdown hook to quit any cached browsers when the JVM exits.
+You can disable this by setting te config property `quitCachedDriverOnShutdown` to `false`.
+
+[[base-url]]
+=== Base URL
+
+The <<base-url, base URL>> to be used can be specified by setting the `baseUrl` config property (with a `String`) value or via the build adapter (the default implementation of which looks at the
+`geb.build.baseUrl` system property).
+Any value set in the config script will take precedence over the value provided by the build adapter.
+
+[[waiting-configuration]]
+=== Waiting
+
+The <<waiting, `waitFor()`>> methods available on browser, page and module objects can be affected by configuration (this is also true for <<content-dsl-wait, implicitly waiting content>>).
+It is possible to specify default values for the timeout and retry interval, and to define presets of these values to be referred to by name.
+
+[[default-waiting-configuration]]
+==== Defaults
+
+Defaults can be specified via:
+
+[source,groovy]
+----
+include::{test-dir}/configuration/WaitingConfigSpec.groovy[tag=default_config,indent=0]
+----
+
+Both values are optional and in seconds. If unspecified, the values of `5` for `timeout` and `0.1` for `retryInterval`.
+
+[[waiting-presets]]
+==== Presets
+
+Presets can be specified via:
+
+[source,groovy]
+----
+include::{test-dir}/configuration/WaitingConfigSpec.groovy[tag=presets,indent=0]
+----
+
+Here we have defined two presets, `slow` and `quick`.
+Notice that the `quick` preset does not specify a `retryInterval` value; defaults will be substituted in for any missing values (i.e. giving the `quick` preset the default `retryInterval` value of
+`0.1`).
+
+==== Failure causes
+
+When waiting fails because the condition throws an exception be it an assertion failure or any other exception then that exception is set as the cause of `WaitTimeoutException` thrown by Geb.
+This usually provides fairly good diagnostics of what went wrong.
+Unfortunately some runtimes, namely Maven Surefire Plugin, don't print full exception stacktraces and exclude the cause from them.
+To make diagnostics easier in such situations it's possible to configure Geb to include string representation of the cause as part of `WaitTimeoutException` message:
+
+[source,groovy]
+----
+include::{test-dir}/configuration/WaitingConfigSpec.groovy[tag=include_cause,indent=0]
+----
+
+[[at-check-waiting]]
+=== Waiting in “at” checkers
+
+At checkers can be configured to be implicitly wrapped with `waitFor()` calls. This can be set with:
+
+[source,groovy]
+----
+include::{test-dir}/configuration/AtCheckWaitingConfigSpec.groovy[tag=config,indent=0]
+----
+
+The possible values for the `atCheckWaiting` property are consistent with the <<content-dsl-wait, ones for `wait` option of content template definitions>>.
+
+This global setting can also be overridden on a <<page-level-at-check-waiting,per page class basis>>.
+
+=== Waiting for base navigator
+
+Sometimes Firefox driver times out when trying to find the root HTML element of the page. This manifests itself in an error similar to:
+
+----
+org.openqa.selenium.NoSuchElementException: Unable to locate element: {"method":"tag name","selector":"html"}
+Command duration or timeout: 576 milliseconds
+For documentation on this error, please visit: http://seleniumhq.org/exceptions/no_such_element.html
+----
+
+You can prevent this error from happening by configuring a wait timeout to use when the driver is locating the root HTML element, using:
+
+[source,groovy]
+----
+include::{test-dir}/configuration/BaseNavigatorWaitingConfigSpec.groovy[tag=config,indent=0]
+----
+
+The possible values for the `baseNavigatorWaiting` option are consistent with the <<content-dsl-wait, ones for `wait` option of content template definitions>>.
+
+[[unexpected-pages-config]]
+=== Unexpected pages
+
+The `unexpectedPages` configuration property allows to specify a list of unexpected `Page` classes that will be checked for when “at” checks are performed.
+Given that `PageNotFoundPage` and `InternalServerErrorPage` have been defined you can use the following to configure them as unexpected pages:
+
+[source,groovy]
+----
+include::{test-dir}/configuration/UnexpectedPagesConfigSpec.groovy[tag=config,indent=0]
+----
+
+See <<unexpected-pages,this section>> for more information on unexpected pages.
+
+[[reporter-configuration]]
+=== Reporter
+
+The _reporter_ is the object responsible for snapshotting the state of the browser (see the <<reporting>> chapter for details).
+All reporters are implementations of the link:api/geb/report/Reporter.html[`Reporter`] interface.
+If no reporter is explicitly defined, a {composite-reporter-link}[composite reporter] will be created from a `ScreenshotReporter` (takes a PNG screenshot) and `PageSourceReporter`
+(dumps the current DOM state as HTML).
+This is a sensible default, but should you wish to use a custom reporter you can assign it to the `reporter` config key.
+
+[source,groovy]
+----
+include::{test-dir}/configuration/ReporterConfigSpec.groovy[tag=config,indent=0]
+----
+
+[[reports-directory-configuration]]
+=== Reports directory
+
+The reports dir configuration is used by to control where the browser should write reports (see the <<reporting>> chapter for details).
+
+In the config script, you can set the path to the directory to use for reports via the `reportsDir` key…
+
+[source,groovy]
+----
+include::{test-dir}/configuration/ReportsDirConfigSpec.groovy[tag=using_path,indent=0]
+----
+
+[NOTE]
+====
+The value is interpreted as a path, and if not absolute will be relative to the JVM's working directory.
+====
+
+The reports dir can also be specified by the build adapter (the default implementation of which looks at the `geb.build.reportsDir` system property).
+Any value set in the config script will take precedence over the value provided by the build adapter.
+
+It is also possible to set the `reportsDir` config item to a file.
+
+[source,groovy]
+----
+include::{test-dir}/configuration/ReportsDirConfigSpec.groovy[tag=using_file,indent=0]
+----
+
+By default this value is *not set*. The browser's link:api/geb/Browser.html#report(java.lang.String)[`report()`] method requires a value for this config item so if you are using the reporting features
+you *must* set a reports dir.
+
+[[report-test-failures-configuration]]
+=== Report test failures only
+
+By default Geb will take a report at the end of each test method, regardless of whether it ended successfully or not.
+The `reportOnTestFailureOnly` setting allows you to specify that a report should be taken only if a failure occurs.
+This might be useful as a way to speed up large test suites.
+
+[source,groovy]
+----
+include::{test-dir}/configuration/ReportOnTestFailuresConfigSpec.groovy[tag=config,indent=0]
+----
+
+=== Reporting listener
+
+It is possible to specify a listener that will be notified when reports are taken. See the section on <<listening-to-reporting, listening to reporting>> for details.
+
+[[auto-clearing-cookies-configuration]]
+=== Auto clearing cookies
+
+Certain integrations will automatically clear the driver's cookies for the current domain, which is usually necessary when using an <<implicit-driver-lifecycle, implicit driver>>.
+This configuration flag, which is `true` by default, can be disabled by setting the `autoClearCookies` value in the config to `false`.
+
+[source,groovy]
+----
+include::{test-dir}/configuration/AutoClearCookiesConfigSpec.groovy[tag=config,indent=0]
+----
+
+== Runtime overrides
+
+The {configuration-api} object also has setters for all of the config properties it exposes, allowing you to override config properties at runtime in particular circumstances if you need to.
+
+For example, you may have one Spock spec that requires the `autoClearCookies` property to be disabled. You could disable it for just this spec by doing something like…
+
+[source,groovy]
+----
+include::{test-dir}/configuration/FunctionalSpec.groovy[tag=runtime_override,indent=0]
+----

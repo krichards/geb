@@ -5,8 +5,9 @@ build
 .gradle
 *.iws
 build.sh
-stacktrace.log
+*.log
 *.iml
 .idea
 out
 *.ipr
+*.hprof

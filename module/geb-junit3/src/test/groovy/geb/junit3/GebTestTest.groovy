@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *			http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,52 +12,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package geb.junit3
 
-import geb.test.util.CallbackHttpServer
+import geb.test.CallbackHttpServer
 import geb.Page
 
 class GebTestTest extends GebTest {
 
-	def server = new CallbackHttpServer()
-	
-	void setUp() {
-		server.start()
-		server.get = { req, res ->
-			res.outputStream << """
-			<html>
-			<body>
-				<div class="d1" id="d1">d1</div>
-			</body>
-			</html>"""
-		}
-		super.setUp()
-		browser.baseUrl = server.baseUrl
-	}
-	
-	void testMissingMethodsAreInvokedOnTheDriverInstance() {
-		// This also verifies that the driver instance is instantiated correctly
-		go("/")
-	}
+    def server = new CallbackHttpServer()
 
-	void testMissingPropertyAccessesAreRequestedOnTheDriverInstance() {
-		page SomePage
-		assert prop == 1
-	}
+    void setUp() {
+        server.start()
+        server.get = { req, res ->
+            res.outputStream << """
+            <html>
+            <body>
+                <div class="d1" id="d1">d1</div>
+            </body>
+            </html>"""
+        }
+        super.setUp()
+        browser.baseUrl = server.baseUrl
+    }
 
-	void testMissingPropertyAssignmentsAreForwardedToTheDriverInstance() {
-		page SomePage
-		prop = 2
-		assert prop == 2
-	}
+    void testMissingMethodsAreInvokedOnTheDriverInstance() {
+        // This also verifies that the driver instance is instantiated correctly
+        go("/")
+    }
 
-	void tearDown() {
-		server.stop()
-		super.tearDown()
-	}
+    void testMissingPropertyAccessesAreRequestedOnTheDriverInstance() {
+        page SomePage
+        assert prop == 1
+    }
+
+    void testMissingPropertyAssignmentsAreForwardedToTheDriverInstance() {
+        page SomePage
+        prop = 2
+        assert prop == 2
+    }
+
+    void tearDown() {
+        server.stop()
+        super.tearDown()
+    }
 }
 
 class SomePage extends Page {
-	def prop = 1
+    def prop = 1
 }
